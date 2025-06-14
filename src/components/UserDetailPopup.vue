@@ -2,7 +2,7 @@
   <div v-if="visible" class="user-detail-popup" :style="popupStyle" ref="popupRef">
     <div class="user-detail-content">
       <!-- Mac窗口控制按钮 -->
-      <mac-window-controls @close="handleClose" />
+      <MacWindowControls @close="handleClose" />
 
       <!-- 用户基本信息 -->
       <div class="user-header">
@@ -10,18 +10,21 @@
         <div class="user-info">
           <div class="user-name-level">
             <h3>{{ user.name }}</h3>
-            <div class="level-badge" :class="levelClass" :style="levelStyle">
+            <div class="level-badge" :style="levelStyle">
               Lv.{{ user.level }}
             </div>
           </div>
-          <p class="user-status">{{ user.status }}</p>
+          <p class="user-status" :class="{ 'online': user.status, 'offline': !user.status }">
+            <el-icon class="status-icon"><CircleCheck v-if="user.status" /><CircleClose v-else /></el-icon>
+            {{ user.status ? '在线' : '离线' }}
+          </p>
         </div>
       </div>
 
       <!-- 操作按钮 -->
-      <div class="user-actions" v-if="!user.hideAddFriend">
+      <div class="user-actions" v-if="!hideAddFriend && !hideStartChat">
         <el-button 
-          v-if="!user.isFriend" 
+          v-if="!user.isFriend && !hideAddFriend" 
           type="primary" 
           @click="handleAddFriend"
           :loading="addingFriend"
@@ -31,13 +34,13 @@
           添加好友
         </el-button>
         <el-button 
-          v-else 
+          v-else-if="user.isFriend && !hideStartChat" 
           type="primary" 
           @click="handleStartChat"
           class="action-button"
         >
           <el-icon><ChatDotRound /></el-icon>
-          发送消息
+          开始聊天
         </el-button>
       </div>
 
@@ -45,7 +48,7 @@
       <div class="user-details">
         <div class="detail-item">
           <span class="label">注册时间</span>
-          <span class="value">{{ user.registerTime }}</span>
+          <span class="value">{{ formatDate(user.createTime) }}</span>
         </div>
       </div>
     </div>
@@ -53,11 +56,14 @@
 </template>
 
 <script setup>
-import { computed, ref, onMounted, onUnmounted, nextTick } from 'vue';
-import { Plus, ChatDotRound } from '@element-plus/icons-vue';
+import { computed, ref, onMounted, onUnmounted } from 'vue';
+import { Plus, ChatDotRound, CircleCheck, CircleClose } from '@element-plus/icons-vue';
 import { useRouter } from 'vue-router';
-import { getLevelClass, getLevelStyle } from '@/utils/level';
+import { getLevelBadgeStyle } from '@/utils/exp';
+import { formatDate } from '@/utils/time';
 import MacWindowControls from './MacWindowControls.vue';
+import { addFriend } from '@/api/friend';
+import { ElMessage } from 'element-plus';
 
 const props = defineProps({
   visible: {
@@ -71,16 +77,23 @@ const props = defineProps({
       id: '',
       name: '',
       avatar: '',
-      level: 1,
-      status: '离线',
-      registerTime: '',
-      isFriend: false,
-      hideAddFriend: false
+      level: '',
+      createTime: '',
+      hideAddFriend: false,
+      isFriend: false
     })
   },
   position: {
     type: Object,
     default: () => ({ x: 0, y: 0 })
+  },
+  hideStartChat: {
+    type: Boolean,
+    default: false
+  },
+  hideAddFriend: {
+    type: Boolean,
+    default: false
   }
 });
 
@@ -96,15 +109,35 @@ const popupStyle = computed(() => ({
   left: `${props.position.x}px`
 }));
 
-// 获取等级对应的样式类
-const levelClass = computed(() => getLevelClass(props.user.level));
-const levelStyle = computed(() => getLevelStyle(props.user.level));
+// 获取等级样式
+const levelStyle = computed(() => getLevelBadgeStyle(props.user.level));
 
 // 添加好友
 const handleAddFriend = async () => {
   addingFriend.value = true;
   try {
-    emit('add-friend', props.user);
+    const response = await addFriend({
+      friendId: props.user.id
+    });
+    
+    if (response.code === 200) {
+      ElMessage({
+        type: 'success',
+        message: '好友请求已发送'
+      });
+      emit('update:visible', false);
+    } else {
+      ElMessage({
+        type: 'error',
+        message: response.message || '添加好友失败'
+      });
+    }
+  } catch (error) {
+    console.error('添加好友失败:', error);
+    ElMessage({
+      type: 'error',
+      message: '添加好友失败，请稍后重试'
+    });
   } finally {
     addingFriend.value = false;
   }
@@ -112,7 +145,8 @@ const handleAddFriend = async () => {
 
 // 开始聊天
 const handleStartChat = () => {
-  emit('start-chat', props.user);
+ // props.user 使用 父组件传过来的值
+  router.push(`/chat/${props.user.id}`);
   emit('update:visible', false);
 };
 
@@ -139,6 +173,8 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+@import '/src/assets/styles/level.css';
+
 .user-detail-popup {
   position: fixed;
   z-index: 9999;
@@ -185,10 +221,23 @@ onUnmounted(() => {
 }
 
 .user-status {
-  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
   font-size: 14px;
-  color: var(--light-secondary-text);
-  transition: all 0.3s ease;
+  margin: 4px 0;
+}
+
+.user-status .status-icon {
+  font-size: 16px;
+}
+
+.user-status.online {
+  color: #67C23A;
+}
+
+.user-status.offline {
+  color: #F56C6C;
 }
 
 .user-actions {
@@ -288,17 +337,5 @@ onUnmounted(() => {
 :deep(.dark-mode) .action-button:hover {
   background: var(--primary-color-hover);
   border-color: var(--primary-color-hover);
-}
-
-.level-badge {
-  padding: 2px 8px;
-  border-radius: 10px;
-  font-size: 12px;
-  font-weight: 600;
-  color: white;
-}
-
-:deep(.dark-mode) .level-badge {
-  opacity: 0.9;
 }
 </style> 

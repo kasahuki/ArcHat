@@ -1,0 +1,191 @@
+/* 主题过渡效果 */
+.theme-transition,
+.theme-transition *,
+.theme-transition *:before,
+.theme-transition *:after {
+  transition: all 0.3s ease !important;
+  transition-delay: 0 !important;
+}
+
+/* 全局主题变量 */
+:root {
+  /* 日间模式变量 */
+  --primary-color: #409EFF;
+  --success-color: #67C23A;
+  --warning-color: #E6A23C;
+  --danger-color: #F56C6C;
+  --info-color: #909399;
+  
+  --bg-color: #f5f7fa;
+  --sidebar-bg: #ffffff;
+  --text-color: #000000;
+  --text-color-secondary: #606266;
+  --border-color: #DCDFE6;
+  --hover-color: #f5f7fa;
+  
+  
+  /* 聊天相关变量 */
+  --chat-bubble-left: #2563eb;
+  --chat-bubble-right: #f2f6fc;
+  --chat-bubble-text: #ffffff;
+  --chat-bubble-right-text: #303133;
+  
+  /* 过渡时间 */
+  --transition-duration: 0.3s;
+}
+
+/* 暗色模式变量 */
+.dark-mode {
+  --bg-color: #1a1d2d;
+  --sidebar-bg: #141824;
+  --text-color: #E5EAF3;
+  --text-color-secondary: #A3A6AD;
+  --border-color: #414243;
+  --hover-color: #2b2d3a;
+  
+
+  
+  /* 聊天相关变量 */
+  --chat-bubble-left: #0066cc;
+  --chat-bubble-right: #2b2d3a;
+  --chat-bubble-text: #ffffff;
+  --chat-bubble-right-text: #E5EAF3;
+}
+
+/* 全局过渡效果 */
+.theme-transition {
+  transition: background-color var(--transition-duration) ease,
+              color var(--transition-duration) ease,
+              border-color var(--transition-duration) ease,
+              box-shadow var(--transition-duration) ease;
+}
+
+
+.dark-mode .el-card {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-input__wrapper {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+  box-shadow: none !important;
+}
+
+.dark-mode .el-input__inner {
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-textarea__inner {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+}
+
+/* .dark-mode .el-button {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+} */
+
+.dark-mode .el-dropdown-menu {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark-mode .el-dropdown-menu__item {
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-dropdown-menu__item:hover {
+  background-color: var(--hover-color) !important;
+}
+
+.dark-mode .el-dialog {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+}
+
+.dark-mode .el-table {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-table th {
+  background-color: var(--bg-color) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-table td {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-pagination {
+  background-color: var(--sidebar-bg) !important;
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-tabs__item {
+  color: var(--text-color) !important;
+}
+
+.dark-mode .el-form-item__label {
+  color: var(--text-color) !important;
+}
+
+/* 自定义滚动条样式 */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+  border-radius: 3px;
+  transition: background-color var(--transition-duration) ease;
+}
+
+.dark-mode ::-webkit-scrollbar-thumb {
+  background-color: var(--border-color);
+}
+
+
+.el-card,
+.mail-section,
+.friends-list,
+.group-card,
+.settings-form {
+  background-color: var(--sidebar-bg) !important;
+  border-color: var(--border-color) !important;
+  color: var(--text-color) !important;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1) !important;
+  transition: all var(--transition-duration) ease !important;
+}
+
+/* 通用文本样式 */
+h1, h2, h3, h4, h5, h6, p, span {
+  color: var(--text-color);
+  transition: color var(--transition-duration) ease;
+}
+
+
+/* 通用边框样式 */
+.el-divider {
+  border-color: var(--border-color) !important;
+  transition: border-color var(--transition-duration) ease !important;
+}
+
+/* 通用hover效果 */
+.el-button:hover,
+.el-dropdown-menu__item:hover,
+.el-menu-item:hover {
+  background-color: var(--hover-color) !important;
+  transition: background-color var(--transition-duration) ease !important;
+}
+

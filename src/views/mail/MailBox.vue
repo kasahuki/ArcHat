@@ -2,12 +2,6 @@
   <div class="mailbox-container">
     <div class="mailbox-header">
       <h2>通知中心</h2>
-      <div class="header-actions">
-        <el-button type="danger" link @click="clearAllRecords">
-          <el-icon><Delete /></el-icon>
-          清空所有
-        </el-button>
-      </div>
     </div>
     
     <div class="mailbox-content">
@@ -16,10 +10,6 @@
         <div class="section-header">
           <div class="section-title">
             <h3>我发送的申请</h3>
-            <el-button type="danger" link @click="clearSentRecords">
-              <el-icon><Delete /></el-icon>
-              清空记录
-            </el-button>
           </div>
           <el-tabs v-model="sentActiveTab" class="mail-tabs">
             <el-tab-pane label="好友申请" name="friend">
@@ -37,26 +27,32 @@
                         <div class="mail-header">
                           <span class="mail-name">{{ item.name }}</span>
                         </div>
-                        <div class="mail-status" :class="item.status">
-                          {{ getStatusText(item.status) }}
+                        <div class="mail-status" :class="getStatusFromCode(item.status)">
+                          {{ getStatusText(getStatusFromCode(item.status)) }}
                         </div>
-                        <div class="mail-time">{{ item.time }}</div>
+                        <div class="mail-time">{{ formatDate(item.createTime) }}</div>
                       </div>
-                    </div>
-                    <div class="mail-actions">
-                      <el-button type="danger" link @click="deleteRecord(item, 'sentFriend')">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
                     </div>
                   </div>
                 </template>
                 <el-empty v-else description="暂无发送的好友申请" />
+                <div class="pagination-container">
+                  <el-pagination
+                    v-model:current-page="sentFriendCurrentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[5, 10, 20, 50]"
+                    :total="total"
+                    layout="total, sizes, prev, pager, next"
+                    @size-change="handleSentFriendSizeChange"
+                    @current-change="handleSentFriendCurrentChange"
+                  />
+                </div>
               </div>
             </el-tab-pane>
             <el-tab-pane label="群聊申请" name="group">
               <div class="mail-list">
                 <template v-if="sentGroupRequests.length > 0">
-                  <div v-for="item in sentGroupRequests" :key="item.id" class="mail-item">
+                  <div v-for="item in set" :key="item.id" class="mail-item">
                     <div class="mail-item-content">
                       <el-avatar 
                         :size="40" 
@@ -74,14 +70,20 @@
                         <div class="mail-time">{{ item.time }}</div>
                       </div>
                     </div>
-                    <div class="mail-actions">
-                      <el-button type="danger" link @click="deleteRecord(item, 'sentGroup')">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
-                    </div>
                   </div>
                 </template>
                 <el-empty v-else description="暂无发送的群聊申请" />
+                <div class="pagination-container">
+                  <el-pagination
+                    v-model:current-page="sentGroupCurrentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[5, 10, 20, 50]"
+                    :total="sentGroupRequests.length"
+                    layout="total, sizes, prev, pager, next"
+                    @size-change="handleSentGroupSizeChange"
+                    @current-change="handleSentGroupCurrentChange"
+                  />
+                </div>
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -93,10 +95,6 @@
         <div class="section-header">
           <div class="section-title">
             <h3>收到的申请</h3>
-            <el-button type="danger" link @click="clearReceivedRecords">
-              <el-icon><Delete /></el-icon>
-              清空记录
-            </el-button>
           </div>
           <el-tabs v-model="receivedActiveTab" class="mail-tabs">
             <el-tab-pane label="好友申请" name="friend">
@@ -114,30 +112,40 @@
                         <div class="mail-header">
                           <span class="mail-name">{{ item.name }}</span>
                         </div>
-                        <div class="mail-message">{{ item.message }}</div>
-                        <div class="mail-time">{{ item.time }}</div>
+                        <div class="mail-status" :class="getStatusFromCode(item.status)">
+                          {{ getStatusText(getStatusFromCode(item.status)) }}
+                        </div>
+                        <div class="mail-time">{{ formatDate(item.createTime) }}</div>
                       </div>
                     </div>
-                    <div class="mail-actions">
-                      <el-button type="success" link @click="handleRequest(item, 'accept')">
+                    <div class="mail-actions" v-if="getStatusFromCode(item.status) === 'pending'">
+                      <DangerButton type="primary" @click="handleRequest(item, 'accept')">
                         接受
-                      </el-button>
-                      <el-button type="danger" link @click="handleRequest(item, 'reject')">
+                      </DangerButton>
+                      <DangerButton type="danger" @click="handleRequest(item, 'reject')">
                         拒绝
-                      </el-button>
-                      <el-button type="danger" link @click="deleteRecord(item, 'receivedFriend')">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
+                      </DangerButton>
                     </div>
                   </div>
                 </template>
                 <el-empty v-else description="暂无收到的好友申请" />
+                <div class="pagination-container">
+                  <el-pagination
+                    v-model:current-page="receivedFriendCurrentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[5, 10, 20, 50]"
+                    :total="receivedFriendRequests.length"
+                    layout="total, sizes, prev, pager, next"
+                    @size-change="handleReceivedFriendSizeChange"
+                    @current-change="handleReceivedFriendCurrentChange"
+                  />
+                </div>
               </div>
             </el-tab-pane>
             <el-tab-pane label="群聊邀请" name="group">
               <div class="mail-list">
                 <template v-if="receivedGroupRequests.length > 0">
-                  <div v-for="item in receivedGroupRequests" :key="item.id" class="mail-item">
+                  <div v-for="item in currentReceivedGroupPage" :key="item.id" class="mail-item">
                     <div class="mail-item-content">
                       <el-avatar 
                         :size="40" 
@@ -154,19 +162,27 @@
                       </div>
                     </div>
                     <div class="mail-actions">
-                      <el-button type="success" link @click="handleRequest(item, 'accept')">
+                      <DangerButton type="primary" @click="handleRequest(item, 'accept')">
                         接受
-                      </el-button>
-                      <el-button type="danger" link @click="handleRequest(item, 'reject')">
+                      </DangerButton>
+                      <DangerButton type="danger" @click="handleRequest(item, 'reject')">
                         拒绝
-                      </el-button>
-                      <el-button type="danger" link @click="deleteRecord(item, 'receivedGroup')">
-                        <el-icon><Delete /></el-icon>
-                      </el-button>
+                      </DangerButton>
                     </div>
                   </div>
                 </template>
                 <el-empty v-else description="暂无收到的群聊邀请" />
+                <div class="pagination-container">
+                  <el-pagination
+                    v-model:current-page="receivedGroupCurrentPage"
+                    v-model:page-size="pageSize"
+                    :page-sizes="[5, 10, 20, 50]"
+                    :total="receivedGroupRequests.length"
+                    layout="total, sizes, prev, pager, next"
+                    @size-change="handleReceivedGroupSizeChange"
+                    @current-change="handleReceivedGroupCurrentChange"
+                  />
+                </div>
               </div>
             </el-tab-pane>
           </el-tabs>
@@ -179,8 +195,8 @@
       v-model:visible="showUserPop"
       :user="currentUser"
       :position="popupPosition"
-      @add-friend="handleAddFriend"
-      @start-chat="handleStartChat"
+      :hide-start-chat="true"
+      :hide-add-friend="true"
     />
 
     <group-detail-popup
@@ -188,8 +204,7 @@
       :group="currentGroup"
       :position="popupPosition"
       :hide-start-group="true"
-      @start-chat="handleStartGroupChat"
-      @join-group="handleJoinGroup"
+      :hide-join-group="true"
     />
 
     
@@ -197,162 +212,29 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue';
+import { ref, computed, onMounted, watch } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete } from '@element-plus/icons-vue';
 import UserDetailPopup from '@/components/UserDetailPopup.vue';
 import GroupDetailPopup from '@/components/GroupDetailPopup.vue';
+import DangerButton from '@/components/dangerButton.vue';
 import { useRouter } from 'vue-router';
+import { getMyFriendApplyList, getMyFriendReceiveList, handleFriendApply } from '@/api/friend';
+import { calculateLevel } from '@/utils/exp';
+import { useUserInfoStore } from '@/stores/user';
+import { formatDate } from '@/utils/time';
 
 const router = useRouter();
 const sentActiveTab = ref('friend');
 const receivedActiveTab = ref('friend');
 
-// 模拟数据
-const sentFriendRequests = ref([
-  {
-    id: 1,
-    name: '张三',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=1',
-    time: '2024-03-20 14:30',
-    status: 'pending'
-  },
-  {
-    id: 2,
-    name: '李四',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=2',
-    time: '2024-03-19 10:15',
-    status: 'accepted'
-  },
-  {
-    id: 3,
-    name: '王小明',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=3',
-    time: '2024-03-18 16:45',
-    status: 'rejected'
-  },
-  {
-    id: 4,
-    name: '赵小红',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=4',
-    time: '2024-03-17 09:20',
-    status: 'pending'
-  },
-  {
-    id: 5,
-    name: '陈大力',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=5',
-    time: '2024-03-16 11:30',
-    status: 'accepted'
-  }
-]);
+// 发送的申请数据
+const sentFriendRequests = ref([]);
+const sentGroupRequests = ref([]);
 
-const sentGroupRequests = ref([
-  {
-    id: 1,
-    name: '技术交流群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G1',
-    time: '2024-03-20 15:45',
-    status: 'pending'
-  },
-  {
-    id: 2,
-    name: '产品设计群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G2',
-    time: '2024-03-19 13:20',
-    status: 'accepted'
-  },
-  {
-    id: 3,
-    name: '前端开发群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G3',
-    time: '2024-03-18 10:15',
-    status: 'rejected'
-  },
-  {
-    id: 4,
-    name: '后端开发群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G4',
-    time: '2024-03-17 16:30',
-    status: 'pending'
-  }
-]);
-
-const receivedFriendRequests = ref([
-  {
-    id: 1,
-    name: '王五',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=3',
-    time: '2024-03-20 16:20',
-    message: '你好，我是王五，想加你为好友'
-  },
-  {
-    id: 2,
-    name: '刘小华',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=6',
-    time: '2024-03-20 15:30',
-    message: '你好，我是刘小华，想和你交个朋友'
-  },
-  {
-    id: 3,
-    name: '张明',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=7',
-    time: '2024-03-20 14:45',
-    message: '你好，我是张明，想认识一下'
-  },
-  {
-    id: 4,
-    name: '李华',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=8',
-    time: '2024-03-20 13:20',
-    message: '你好，我是李华，想加你为好友'
-  },
-  {
-    id: 5,
-    name: '陈静',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=9',
-    time: '2024-03-20 11:15',
-    message: '你好，我是陈静，想和你交个朋友'
-  }
-]);
-
-const receivedGroupRequests = ref([
-  {
-    id: 1,
-    name: '产品交流群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G2',
-    time: '2024-03-20 17:00',
-    message: '邀请你加入产品交流群'
-  },
-  {
-    id: 2,
-    name: 'UI设计群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G5',
-    time: '2024-03-20 16:45',
-    message: '邀请你加入UI设计交流群'
-  },
-  {
-    id: 3,
-    name: '算法交流群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G6',
-    time: '2024-03-20 15:30',
-    message: '邀请你加入算法交流群'
-  },
-  {
-    id: 4,
-    name: '游戏开发群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G7',
-    time: '2024-03-20 14:20',
-    message: '邀请你加入游戏开发交流群'
-  },
-  {
-    id: 5,
-    name: '人工智能群',
-    avatar: 'https://placeholder.svg?height=40&width=40&text=G8',
-    time: '2024-03-20 13:15',
-    message: '邀请你加入人工智能交流群'
-  }
-]);
+// 收到的申请数据
+const receivedFriendRequests = ref([]);
+const receivedGroupRequests = ref([]);
 
 const showUserPop = ref(false);
 const showGroupPop = ref(false);
@@ -375,109 +257,36 @@ const getStatusText = (status) => {
   };
   return statusMap[status] || status;
 };
+// 处理请求申请的数据模型
+const applyModel = ref({
+  friendId: '',
+  status: ''
+});
 
-const handleRequest = (item, action) => {
-  if (action === 'accept') {
-    ElMessage.success('已接受申请');
-  } else {
-    ElMessage.info('已拒绝申请');
+// 处理好友申请
+const handleRequest = async (item, action) => {
+  try {
+    console.log('处理申请的数据:', item); // 添加日志查看处理的数据
+    if (!item.friendId) {
+      ElMessage.error('申请人ID不存在');
+      return;
+    }
+    
+    applyModel.value.friendId = item.friendId;
+    applyModel.value.status = action === 'accept' ? 1 : 2;
+
+    const res = await handleFriendApply(applyModel.value);
+    if (res.code === 200) {
+      ElMessage.success(action === 'accept' ? '已接受申请' : '已拒绝申请');
+      // 刷新列表
+      fetchReceivedFriendRequests();
+    } else {
+      ElMessage.error(res.msg || '操作失败');
+    }
+  } catch (error) {
+    console.error('处理好友申请失败:', error);
+    ElMessage.error('处理好友申请失败');
   }
-  // 从列表中移除
-  if (receivedActiveTab.value === 'friend') {
-    receivedFriendRequests.value = receivedFriendRequests.value.filter(req => req.id !== item.id);
-  } else {
-    receivedGroupRequests.value = receivedGroupRequests.value.filter(req => req.id !== item.id);
-  }
-};
-
-// 删除单条记录
-const deleteRecord = (item, type) => {
-  ElMessageBox.confirm(
-    '确定要删除这条记录吗？',
-    '删除确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    switch (type) {
-      case 'sentFriend':
-        sentFriendRequests.value = sentFriendRequests.value.filter(req => req.id !== item.id);
-        break;
-      case 'sentGroup':
-        sentGroupRequests.value = sentGroupRequests.value.filter(req => req.id !== item.id);
-        break;
-      case 'receivedFriend':
-        receivedFriendRequests.value = receivedFriendRequests.value.filter(req => req.id !== item.id);
-        break;
-      case 'receivedGroup':
-        receivedGroupRequests.value = receivedGroupRequests.value.filter(req => req.id !== item.id);
-        break;
-    }
-    ElMessage.success('删除成功');
-  }).catch(() => {
-    ElMessage.info('已取消删除');
-  });
-};
-
-// 清空发送的记录
-const clearSentRecords = () => {
-  ElMessageBox.confirm(
-    '确定要清空所有发送的申请记录吗？',
-    '清空确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    sentFriendRequests.value = [];
-    sentGroupRequests.value = [];
-    ElMessage.success('清空成功');
-  }).catch(() => {
-    ElMessage.info('已取消清空');
-  });
-};
-
-// 清空收到的记录
-const clearReceivedRecords = () => {
-  ElMessageBox.confirm(
-    '确定要清空所有收到的申请记录吗？',
-    '清空确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    receivedFriendRequests.value = [];
-    receivedGroupRequests.value = [];
-    ElMessage.success('清空成功');
-  }).catch(() => {
-    ElMessage.info('已取消清空');
-  });
-};
-
-// 清空所有记录
-const clearAllRecords = () => {
-  ElMessageBox.confirm(
-    '确定要清空所有记录吗？',
-    '清空确认',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning'
-    }
-  ).then(() => {
-    sentFriendRequests.value = [];
-    sentGroupRequests.value = [];
-    receivedFriendRequests.value = [];
-    receivedGroupRequests.value = [];
-    ElMessage.success('清空成功');
-  }).catch(() => {
-    ElMessage.info('已取消清空');
-  });
 };
 
 const showUserDetail = (user) => {
@@ -486,17 +295,15 @@ const showUserDetail = (user) => {
     id: user.id,
     name: user.name,
     avatar: user.avatar,
-    level: 1, // 默认等级
-    status: '在线', // 默认状态
-    registerTime: '2024-01-01', // 默认注册时间
-    isFriend: false, // 默认非好友
-    hideAddFriend: true // 隐藏添加好友按钮
+    level: user.level, 
+    status: user.userStatus,
+    createTime: user.createTime
   };
   
   // 获取鼠标位置
   const event = window.event;
   popupPosition.value = {
-    x: event.clientX - 150,
+    x: event.clientX - 350,
     y: event.clientY - 190
   };
   
@@ -505,33 +312,21 @@ const showUserDetail = (user) => {
 
 const hideUserDetail = () => {
   showUserPop.value = false;
+  currentUser.value = null;
 };
-
-const handleAddFriend = (user) => {
-  ElMessage.success(`已发送好友申请给 ${user.name}`);
-  showUserPop.value = false;
-};
-
-const handleStartChat = (user) => {
-  router.push(`/chat/${user.id}`);
-  showUserPop.value = false;
-};
-
 
 const showGroupDetail = (group) => {
   // 构造完整的群聊信息
   currentGroup.value = {
     name: group.name,
     avatar: group.avatar,
-    createTime: group.time,
-
+    createTime: group.time
   };
-
   
   // 获取鼠标位置
   const event = window.event;
   popupPosition.value = {
-    x: event.clientX +10,
+    x: event.clientX + 10,
     y: event.clientY + 10
   };
   
@@ -540,9 +335,140 @@ const showGroupDetail = (group) => {
 
 const hideGroupDetail = () => {
   showGroupPop.value = false;
+  currentGroup.value = null;
 };
-const handleStartGroupChat = () => {
-  console.log('开始聊天');
+
+// 分页相关
+const pageSize = ref(5);
+const sentFriendCurrentPage = ref(1);
+const sentGroupCurrentPage = ref(1);
+const receivedFriendCurrentPage = ref(1);
+const receivedGroupCurrentPage = ref(1);
+const total = ref(0);
+
+// 获取我发送的好友申请列表
+const fetchSentFriendRequests = async () => {
+  try {
+    const res = await getMyFriendApplyList({
+      uid: useUserInfoStore().userInfo.uid,
+      page: sentFriendCurrentPage.value,
+      pageSize: pageSize.value
+    });
+    if (res.code === 200) {
+      // 转换数据格式
+      sentFriendRequests.value = res.data.records.map(item => ({
+        id: item.id,
+        name: item.username,
+        avatar: item.avatar || 'https://placeholder.svg?height=40&width=40&text=U',
+        createTime: item.createTime,
+        status: item.applyStatus,
+        userStatus: item.userStatus,
+        level: calculateLevel(item.exep || 0)
+      }));
+      // 更新总数
+      total.value = res.data.total;
+      console.log(sentFriendRequests.value.status) // undefined
+      console.log(sentFriendRequests.value.friendId)
+    }
+  } catch (error) {
+    console.error('获取好友申请列表失败:', error);
+    ElMessage.error('获取好友申请列表失败');
+  }
+};
+
+// 获取我收到的好友申请列表
+const fetchReceivedFriendRequests = async () => {
+  try {
+    const res = await getMyFriendReceiveList({
+      uid: useUserInfoStore().userInfo.uid,
+      page: receivedFriendCurrentPage.value,
+      pageSize: pageSize.value
+    });
+    if (res.code === 200) {
+      // 转换数据格式
+      receivedFriendRequests.value = res.data.records.map(item => ({
+        id: item.id,
+        name: item.username,
+        avatar: item.avatar || 'https://placeholder.svg?height=40&width=40&text=U',
+        friendId: item.friendId,
+        createTime: item.createTime,
+        status: item.applyStatus,
+        userStatus: item.userStatus,
+        level: calculateLevel(item.exep || 0)
+      }));
+      // 更新总数
+      total.value = res.data.total;
+    }
+  } catch (error) {
+    console.error('获取收到的好友申请列表失败:', error);
+    ElMessage.error('获取收到的好友申请列表失败');
+  }
+};
+
+// 状态码转换为状态文本
+const getStatusFromCode = (code) => {
+  const statusMap = {
+    0: 'pending',
+    1: 'accepted',
+    2: 'rejected'
+  };
+  return statusMap[code] || 'pending';
+};
+
+// 监听分页变化
+watch([sentFriendCurrentPage, pageSize], () => {
+  fetchSentFriendRequests();
+});
+
+// 监听收到的申请分页变化
+watch([receivedFriendCurrentPage, pageSize], () => {
+  fetchReceivedFriendRequests();
+});
+
+// 处理分页大小变化
+const handleSentFriendSizeChange = (val) => {
+  pageSize.value = val;
+  sentFriendCurrentPage.value = 1;
+};
+
+// 处理页码变化
+const handleSentFriendCurrentChange = (val) => {
+  sentFriendCurrentPage.value = val;
+};
+
+// 组件挂载时获取数据
+onMounted(() => {
+  fetchSentFriendRequests();
+  fetchReceivedFriendRequests();
+});
+
+// 处理页码改变
+const handleSentGroupCurrentChange = (val) => {
+  sentGroupCurrentPage.value = val;
+};
+
+const handleReceivedFriendCurrentChange = (val) => {
+  receivedFriendCurrentPage.value = val;
+};
+
+const handleReceivedGroupCurrentChange = (val) => {
+  receivedGroupCurrentPage.value = val;
+};
+
+// 处理每页条数改变
+const handleSentGroupSizeChange = (val) => {
+  pageSize.value = val;
+  sentGroupCurrentPage.value = 1;
+};
+
+const handleReceivedFriendSizeChange = (val) => {
+  pageSize.value = val;
+  receivedFriendCurrentPage.value = 1;
+};
+
+const handleReceivedGroupSizeChange = (val) => {
+  pageSize.value = val;
+  receivedGroupCurrentPage.value = 1;
 };
 </script>
 
@@ -614,16 +540,53 @@ const handleStartGroupChat = () => {
   justify-content: space-between;
   align-items: center;
   padding: 12px;
-  background: var(--light-bg);
-  border-radius: 6px;
-  transition: all 0.3s ease;
-  border: 1px solid var(--light-border);
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6));
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border-radius: 12px;
+  transition: all 1.5s ease;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    5px 5px 15px rgba(0, 0, 0, 0.1),
+    -5px -5px 15px rgba(255, 255, 255, 0.7),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.8),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.05);
+  transform-style: preserve-3d;
+  perspective: 1000px;
+}
+
+.mail-item::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 50%;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.4),
+    transparent
+  );
+  transform: skewX(-25deg);
+  transition: 1.2s ease;
+}
+
+.mail-item:hover::before {
+  left: 150%;
 }
 
 .mail-item:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--primary-color);
+  transform: translateY(-2px) rotateX(5deg);
+  box-shadow: 
+    8px 8px 20px rgba(0, 0, 0, 0.15),
+    -8px -8px 20px rgba(255, 255, 255, 0.8),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.9),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transition: all 0.5s ease;
 }
 
 .mail-item-content {
@@ -716,15 +679,6 @@ const handleStartGroupChat = () => {
   font-size: 13px;
 }
 
-:deep(.el-button--text) {
-  padding: 4px 8px;
-  font-size: 13px;
-}
-
-:deep(.el-button--text .el-icon) {
-  margin-right: 2px;
-}
-
 /* 暗色模式适配 */
 .dark-mode .mailbox-header h2 {
   color: var(--dark-text);
@@ -740,13 +694,31 @@ const handleStartGroupChat = () => {
 }
 
 .dark-mode .mail-item {
-  background: var(--dark-bg);
-  border-color: var(--dark-border);
+  background: linear-gradient(145deg, rgba(40, 40, 40, 0.8), rgba(30, 30, 30, 0.6));
+  border-color: rgba(255, 255, 255, 0.1);
+  box-shadow: 
+    5px 5px 15px rgba(0, 0, 0, 0.3),
+    -5px -5px 15px rgba(60, 60, 60, 0.3),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.1),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.dark-mode .mail-item::before {
+  background: linear-gradient(
+    to right,
+    transparent,
+    rgba(255, 255, 255, 0.15),
+    transparent
+  );
 }
 
 .dark-mode .mail-item:hover {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  border-color: var(--primary-color);
+  box-shadow: 
+    8px 8px 20px rgba(0, 0, 0, 0.4),
+    -8px -8px 20px rgba(60, 60, 60, 0.4),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.15),
+    inset -1px -1px 2px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .dark-mode .mail-name {
@@ -784,5 +756,43 @@ const handleStartGroupChat = () => {
 
 .el-avatar:hover {
   transform: scale(1.05);
+}
+
+.pagination-container {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+:deep(.el-pagination) {
+  --el-pagination-button-color: var(--light-text);
+  --el-pagination-hover-color: var(--primary-color);
+  --el-pagination-button-bg-color: var(--light-sidebar-bg);
+  --el-pagination-button-disabled-color: var(--light-secondary-text);
+  --el-pagination-button-disabled-bg-color: var(--light-sidebar-bg);
+}
+
+.dark-mode :deep(.el-pagination) {
+  --el-pagination-button-color: var(--dark-text);
+  --el-pagination-hover-color: var(--primary-color);
+  --el-pagination-button-bg-color: var(--dark-sidebar-bg);
+  --el-pagination-button-disabled-color: var(--dark-secondary-text);
+  --el-pagination-button-disabled-bg-color: var(--dark-sidebar-bg);
+}
+
+:deep(.el-pagination .el-select .el-input) {
+  width: 100px;
+}
+
+:deep(.el-pagination .el-select .el-input .el-input__wrapper) {
+  background-color: var(--light-sidebar-bg);
+  box-shadow: none;
+  border: 1px solid var(--light-border);
+}
+
+.dark-mode :deep(.el-pagination .el-select .el-input .el-input__wrapper) {
+  background-color: var(--dark-sidebar-bg);
+  border-color: var(--dark-border);
 }
 </style> 

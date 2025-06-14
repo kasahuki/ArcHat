@@ -1,0 +1,41 @@
+/* 等级徽章基础样式 */
+.level-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: white;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+}
+
+/* 搜索对话框中的等级徽章 */
+.dialog-content .search-content .level-badge {
+  padding: 2px 8px;
+  border-radius: 8px;
+  font-size: 10px;
+  min-width: 10px;
+}
+
+/* 用户详情弹窗中的等级徽章 */
+.user-detail-popup .level-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  min-width: 20px;
+}
+
+/* 用户中心中的等级徽章 */
+.user-hub .level-badge {
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  min-width: 40px;
+}
+
+/* 暗色模式适配 */
+:deep(.dark-mode) .level-badge {
+  opacity: 0.9;
+} 

@@ -9,10 +9,10 @@
       <!-- Left Panel (Welcome/Register) -->
       <div class="panel welcome-panel" :class="{ 'panel-right': showRegister }">
         <div class="panel-content">
-          <h1 class="welcome-title">{{ showRegister ? 'Welcome Back!' : 'Hello, Welcome!' }}</h1>
+          <h1 class="welcome-title" style="color: cyan;">{{ showRegister ? 'Welcome Back!' : 'Hello, Welcome!' }}</h1>
           <p class="welcome-text">{{ showRegister ? 'Already have an account?' : 'Don\'t have an account?' }}</p>
           <el-button class="action-button" @click="toggleForm">
-            {{ showRegister ? 'Login' : 'Register' }}
+            <span style="color: white;">{{ showRegister ? 'Login' : 'Register' }}</span>
           </el-button>
         </div>
       </div>
@@ -38,7 +38,7 @@
               </div>
 
               <el-button type="primary" class="submit-button" @click="handleLogin">
-                Login
+                <span style="color: white;">Login</span>
               </el-button>
 
 
@@ -62,7 +62,7 @@
               </el-form-item>
 
               <el-button type="primary" class="submit-button" @click="handleRegister">
-                Register
+                <span style="color: white;">Register</span>
               </el-button>
             </el-form>
           </div>
@@ -76,9 +76,14 @@
 import { ref, reactive } from 'vue'
 import { User, Lock } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
+import { registerService, loginService } from '@/api/user'
+import { useUserInfoStore } from '@/stores/user'
 
 // State
 const showRegister = ref(false)
+const router = useRouter()
+const userInfoStore = useUserInfoStore()
 
 // Form data
 const loginForm = reactive({
@@ -101,14 +106,69 @@ const toggleForm = () => {
   showRegister.value = !showRegister.value
 }
 
-const handleLogin = () => {
-  ElMessage.success('Login successful!')
-  // Add your login logic here
+const handleLogin = async () => {
+  try {
+    if (!loginForm.username || !loginForm.password) {
+      ElMessage.error('请填写完整的登录信息')
+      return
+    }
+    
+    const res = await loginService({
+      username: loginForm.username,
+      password: loginForm.password
+    })
+    
+    if (res.code === 200) {
+      ElMessage.success('登录成功')
+      // 使用 store 存储用户信息
+      userInfoStore.setUserInfo(res.data)
+      // 登录成功后建立 WebSocket 连接
+      userInfoStore.connectWebSocket(res.data.token);
+      // 跳转到首页
+      router.push('/userHub')
+    } else {
+      ElMessage.error(res.msg || '登录失败')
+    }
+  } catch (error) {
+    ElMessage.error('登录失败，请稍后重试')
+    console.error('登录错误:', error)
+  }
 }
 
-const handleRegister = () => {
-  ElMessage.success('Registration successful!')
-  // Add your registration logic here
+
+
+const handleRegister = async () => {
+  try {
+    if (!registerForm.userName || !registerForm.password || !registerForm.confirmPassword) {
+      ElMessage.error('请填写完整的注册信息')
+      return
+    }
+    
+    if (registerForm.password !== registerForm.confirmPassword) {
+      ElMessage.error('两次输入的密码不一致')
+      return
+    }
+    
+    const res = await registerService({
+      userName: registerForm.userName,
+      password: registerForm.password
+    })
+    
+    if (res.code === 200) {
+      ElMessage.success('注册成功')
+      // 切换到登录表单
+      showRegister.value = false
+      // 清空注册表单
+      registerForm.userName = ''
+      registerForm.password = ''
+      registerForm.confirmPassword = ''
+    } else {
+      ElMessage.error(res.message || '注册失败')
+    }
+  } catch (error) {
+    ElMessage.error('注册失败，请稍后重试')
+    console.error('注册错误:', error)
+  }
 }
 </script>
 
@@ -120,7 +180,7 @@ const handleRegister = () => {
   min-height: 100vh;
   background-color: #f0f2f5;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-image: url("/src/assets/image/login.jpg");
+  background-image: url("/src/assets/image/login.png");
   background-size: cover;
   background-position: center;
   position: relative;
