@@ -97,7 +97,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:visible', 'add-friend', 'start-chat']);
+const emit = defineEmits(['update:visible', 'add-friend', 'start-chat', 'friend-request-sent']);
 
 const router = useRouter();
 const addingFriend = ref(false);
@@ -126,6 +126,7 @@ const handleAddFriend = async () => {
         message: '好友请求已发送'
       });
       emit('update:visible', false);
+      emit('friend-request-sent');
     } else {
       ElMessage({
         type: 'error',
@@ -145,8 +146,7 @@ const handleAddFriend = async () => {
 
 // 开始聊天
 const handleStartChat = () => {
- // props.user 使用 父组件传过来的值
-  router.push(`/chat/${props.user.id}`);
+  emit('start-chat', props.user);
   emit('update:visible', false);
 };
 

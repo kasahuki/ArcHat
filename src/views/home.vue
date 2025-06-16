@@ -310,6 +310,7 @@ import { useUserInfoStore } from '@/stores/user';
 import { formatDate, formatMessageTime } from '@/utils/time';
 import { useContactStore } from '@/stores/contact';
 import { getMessageById } from '@/api/chatService';
+import emitter from '@/utils/eventBus';
 
 const userInfoStore = useUserInfoStore()
 const contactStore = useContactStore();
@@ -349,6 +350,11 @@ const currentView = ref('friends');
 
 const friendList = ref([]);
 const groupList = ref([]);
+const contactList = ref([]);
+const contactQuery = ref({
+  page: 1,
+  pageSize: 10
+});
 
 const activeIcon = ref('chat');
 
@@ -377,10 +383,9 @@ const isLoading = ref(false);
 const isFriendListLoaded = ref(false);
 
 // 获取好友列表
-const getFriends = async (uid) => {
+const fetchFriendList = async () => {
   try {
-    isLoading.value = true;
-    const res = await getFriendList(uid);
+    const res = await getFriendList(userInfo.value.uid);
     if (res.code === 200) {
       const friends = res.data.map(item => ({
         id: item.id,
@@ -392,23 +397,66 @@ const getFriends = async (uid) => {
       }));
       friendList.value = friends;
       isFriendListLoaded.value = true;
+
     } else {
       ElMessage.error(res.msg || '获取好友列表失败');
     }
   } catch (error) {
     console.error('获取好友列表错误:', error);
     ElMessage.error('获取好友列表失败，请稍后重试');
-  } finally {
-    isLoading.value = false;
   }
 };
 
-// 会话列表数据
-const contactList = ref([]);
-const contactQuery = ref({
-  page: 1,
-  pageSize: 10
-});
+// 获取联系人列表
+const fetchContactList = async () => {
+  console.log('=== fetchContactList 被调用 ===');
+  try {
+    // 确保好友列表已加载
+    if (!isFriendListLoaded.value) {
+      await fetchFriendList();
+    }
+
+    const res = await getContactList(contactQuery.value);
+    console.log('getContactList 返回结果:', res);
+    
+    if (res.code === 200) {
+      // 使用映射获取好友信息
+      const contacts = res.data.records.map(contact => {
+        const friendInfo = friendMap.value.get(contact.friendId) || {};
+        return {
+          id: contact.friendId,
+          roomId: contact.roomId,
+          friendId: contact.friendId,
+          activeTime: contact.activeTime,
+          lastMsgId: contact.lastMsgId,
+          readTime: contact.readTime,
+          username: friendInfo.username || '未知用户',
+          avatar: friendInfo.avatar || '',
+          status: friendInfo.status || false,
+          createTime: friendInfo.createTime,
+          exep: friendInfo.exep
+        };
+      });
+      
+      console.log('更新联系人列表:', contacts);
+      contactList.value = contacts;
+      // 将联系人信息存储到 contact store
+      contactStore.setContacts(contacts);
+      
+      // 获取每个联系人的最新消息
+      for (const contact of contacts) {
+        if (contact.lastMsgId) {
+          await getLatestMessage(contact);
+        }
+      }
+    } else {
+      ElMessage.error(res.msg || '获取会话列表失败');
+    }
+  } catch (error) {
+    console.error('获取会话列表错误:', error);
+    ElMessage.error('获取会话列表失败，请稍后重试');
+  }
+};
 
 // 创建好友信息映射
 const friendMap = computed(() => {
@@ -441,64 +489,9 @@ const getLatestMessage = async (contact) => {
   }
 };
 
-// 修改 getContacts 函数
-const getContacts = async () => {
-  try {
-    // 如果好友列表还没加载完成，等待加载
-    if (!isFriendListLoaded.value) {
-      await new Promise(resolve => {
-        const checkLoaded = setInterval(() => {
-          if (isFriendListLoaded.value) {
-            clearInterval(checkLoaded);
-            resolve();
-          }
-        }, 100);
-      });
-    }
-
-    const res = await getContactList(contactQuery.value);
-    if (res.code === 200) {
-      // 使用映射获取好友信息
-      const contacts = res.data.records.map(contact => {
-        const friendInfo = friendMap.value.get(contact.friendId) || {};
-        return {
-          id: contact.friendId,
-          roomId: contact.roomId,
-          friendId: contact.friendId,
-          activeTime: contact.activeTime,
-          lastMsgId: contact.lastMsgId,
-          readTime: contact.readTime,
-          username: friendInfo.username || '未知用户',
-          avatar: friendInfo.avatar || '',
-          status: friendInfo.status || false,
-          createTime: friendInfo.createTime,
-          exep: friendInfo.exep
-        };
-      });
-      
-      contactList.value = contacts;
-      // 将联系人信息存储到 contact store
-      contactStore.setContacts(contacts);
-      
-      // 获取每个联系人的最新消息
-      for (const contact of contacts) {
-        if (contact.lastMsgId) {
-          await getLatestMessage(contact);
-        }
-      }
-    } else {
-      ElMessage.error(res.msg || '获取会话列表失败');
-    }
-  } catch (error) {
-    console.error('获取会话列表错误:', error);
-    ElMessage.error('获取会话列表失败，请稍后重试');
-  }
-};
-
 onMounted(() => {
-  console.log()
-  getFriends( userInfo.value.uid)
-  getContacts(); // 添加获取会话列表
+  console.log('Home 组件挂载，注册事件监听器');
+  fetchContactList();
   if (isDarkMode.value) {
     document.body.classList.add('dark-theme');
   }
@@ -507,10 +500,22 @@ onMounted(() => {
   setActiveIconFromRoute();
   
   window.addEventListener('update-active-menu', handleMenuUpdate);
+  // 监听刷新联系人列表事件
+  emitter.on('refresh-contact-list', () => {
+    console.log('收到 refresh-contact-list 事件');
+    fetchContactList();
+  });
+  // 监听刷新好友列表事件
+  emitter.on('refresh-friend-list', () => {
+    console.log('收到 refresh-friend-list 事件');
+    fetchFriendList();
+  });
 });
 
 onUnmounted(() => {
   window.removeEventListener('update-active-menu', handleMenuUpdate);
+  emitter.off('refresh-contact-list', fetchContactList);
+  emitter.off('refresh-friend-list', fetchFriendList);
 });
 
 const toggleTheme = () => {

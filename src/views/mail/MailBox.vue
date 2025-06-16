@@ -197,6 +197,7 @@
       :position="popupPosition"
       :hide-start-chat="true"
       :hide-add-friend="true"
+      @friend-request-sent="handleFriendRequestSent"
     />
 
     <group-detail-popup
@@ -223,6 +224,7 @@ import { getMyFriendApplyList, getMyFriendReceiveList, handleFriendApply } from 
 import { calculateLevel } from '@/utils/exp';
 import { useUserInfoStore } from '@/stores/user';
 import { formatDate } from '@/utils/time';
+import emitter from '@/utils/eventBus';
 
 const router = useRouter();
 const sentActiveTab = ref('friend');
@@ -266,7 +268,7 @@ const applyModel = ref({
 // 处理好友申请
 const handleRequest = async (item, action) => {
   try {
-    console.log('处理申请的数据:', item); // 添加日志查看处理的数据
+    console.log('处理申请的数据:', item);
     if (!item.friendId) {
       ElMessage.error('申请人ID不存在');
       return;
@@ -280,6 +282,8 @@ const handleRequest = async (item, action) => {
       ElMessage.success(action === 'accept' ? '已接受申请' : '已拒绝申请');
       // 刷新列表
       fetchReceivedFriendRequests();
+      // 通知其他组件刷新好友列表
+      emitter.emit('refresh-friend-list');
     } else {
       ElMessage.error(res.msg || '操作失败');
     }
@@ -469,6 +473,12 @@ const handleReceivedFriendSizeChange = (val) => {
 const handleReceivedGroupSizeChange = (val) => {
   pageSize.value = val;
   receivedGroupCurrentPage.value = 1;
+};
+
+// 处理好友请求发送事件
+const handleFriendRequestSent = () => {
+  // 刷新发送的好友申请列表
+  fetchSentFriendRequests();
 };
 </script>
 

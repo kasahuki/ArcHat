@@ -240,6 +240,8 @@
         v-model:visible="showUserDetail"
         :user="selectedUser"
         :position="userDetailPosition"
+        @friend-request-sent="handleFriendRequestSent"
+        @start-chat="handleStartChat"
       />
 
       <!-- 群聊详情弹窗 -->
@@ -309,12 +311,13 @@ import SearchDialog from '@/components/SearchDialog.vue';
 import { calculateLevel, calculateExpProgress, getLevelBadgeStyle as getExpLevelBadgeStyle, getStatusStyle } from '@/utils/exp';
 import { logoutService, modifyPwdService, modifyUsernameService } from '@/api/user';
 import { deleteFriend } from '@/api/friend';
-
 import { useUserInfoStore } from '@/stores/user';
-const userInfoStore = useUserInfoStore()
-const userInfo = computed(() => userInfoStore.userInfo);
+import emitter from '@/utils/eventBus';
 
 const router = useRouter();
+const userInfoStore = useUserInfoStore();
+const userInfo = computed(() => userInfoStore.userInfo);
+
 const showFriendsDialog = ref(false);
 const friendSearchQuery = ref('');
 
@@ -579,6 +582,20 @@ const handleShowSearchDialog = (type) => {
 
 // 添加新的响应式变量
 const activeTab = ref('friends')
+
+// 处理好友请求发送事件
+const handleFriendRequestSent = () => {
+  // 刷新好友列表
+  fetchFriendList();
+};
+
+// 处理开始聊天
+const handleStartChat = (user) => {
+  // 通知 home 组件刷新联系人列表
+  emitter.emit('refresh-contact-list');
+  // 直接跳转到聊天界面
+  router.push(`/chat/${user.id}`);
+};
 </script>
 
 <style scoped>

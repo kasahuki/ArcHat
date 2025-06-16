@@ -1,6 +1,29 @@
 <template>
   <router-view v-if="!route.params.id"></router-view>
   <div v-else class="chat-container">
+    <!-- WebSocket 连接状态提示 -->
+    <div v-if="connectionStatus === 'disconnected'" class="connection-status-bar">
+      <el-alert
+        title="WebSocket 连接已断开"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        <template #default>
+          <span>消息可能无法正常发送，请点击重新连接</span>
+          <el-button 
+            type="primary" 
+            size="small" 
+            @click="handleManualReconnect"
+            :loading="connectionStatus === 'connecting'"
+            style="margin-left: 10px;"
+          >
+            {{ connectionStatus === 'connecting' ? '连接中...' : '重新连接' }}
+          </el-button>
+        </template>
+      </el-alert>
+    </div>
+
     <!-- 顶部用户信息 -->
     <div class="user-header">
       <div class="user-info">
@@ -96,6 +119,7 @@ import { useUserInfoStore } from '@/stores/user';
 import { useContactStore } from '@/stores/contact';
 import { calculateLevel } from '@/utils/exp';
 import { getMessageList } from '@/api/chatService';
+import emitter from '@/utils/eventBus';
 
 const route = useRoute();
 const router = useRouter();
@@ -141,14 +165,12 @@ const messageInput = ref(null);
 // 使用 store 中的 WebSocket 实例
 const chatWS = computed(() => userStore.chatWS);
 
-// 检查 WebSocket 连接状态并尝试重连
-const checkAndReconnectWebSocket = () => {
-  if (!chatWS.value || !chatWS.value.ws || chatWS.value.ws.readyState !== WebSocket.OPEN) {
-    console.log('WebSocket 未连接，尝试重连...');
-    if (chatWS.value) {
-      chatWS.value.connect();
-    }
-  }
+// 连接状态
+const connectionStatus = computed(() => userStore.connectionStatus);
+
+// 检查 WebSocket 连接状态
+const checkWebSocketConnection = () => {
+  return chatWS.value && typeof chatWS.value.isConnected === 'function' && chatWS.value.isConnected();
 };
 
 // 滚动到底部的函数
@@ -162,37 +184,54 @@ const scrollToBottom = () => {
 };
 
 // 监听 WebSocket 消息
-watch(chatWS, (newWS) => {
-  if (newWS && newWS.ws) {
-    // 设置消息处理函数
-    newWS.ws.onmessage = (event) => {
+watch(chatWS, (newWS, oldWS) => {
+  console.log('chatWS 发生变化:', {
+    新WS: newWS,
+    旧WS: oldWS,
+    新WS存在: !!newWS,
+    新WS_ws存在: !!(newWS && newWS.ws)
+  });
+  
+  if (newWS) {
+    console.log('设置 WebSocket 消息处理回调');
+    // 使用 chat.js 中的 onMessage 回调机制，不覆盖原始的 onmessage
+    newWS.onMessage = (event) => {
       try {
         const data = JSON.parse(event.data);
-        console.log('收到消息:', data);
+        console.log('Chat.vue 通过回调处理消息:', data);
 
         // 根据消息类型处理
         switch (data.type) {
           case 1000: // 聊天消息
+            console.log('Chat.vue 处理聊天消息:', data.data);
             if (data.data) {
-              const messageData = data.data
+              const messageData = data.data;
+              console.log('准备添加消息到列表，当前消息数量:', messages.value.length);
+              
               // 添加到消息列表
               messages.value.push({
                 side: 'left',
                 text: messageData,
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
               });
-              // 滚动到底部
-              scrollToBottom();
+              
+              console.log('消息已添加，当前消息数量:', messages.value.length);
+              console.log('最新消息:', messages.value[messages.value.length - 1]);
+              
+              // 强制触发响应式更新
+              nextTick(() => {
+                scrollToBottom();
+              });
             }
             break;
           case 2: // 心跳包
-            console.log('收到心跳包');
+            console.log('Chat.vue 收到心跳包');
             break;
           default:
-            console.log('未知消息类型:', data.type);
+            console.log('Chat.vue 未知消息类型:', data.type);
         }
       } catch (error) {
-        console.error('处理消息失败:', error);
+        console.error('Chat.vue 处理消息失败:', error);
       }
     };
   }
@@ -222,6 +261,7 @@ const checkAndHandleChat = async (userId) => {
       // 创建私聊房间
       const createRes = await addPrivateRoom({ uid: userId });
       if (createRes.code === 200) {
+        emitter.emit('refresh-contact-list');
         return;
       } else {
         router.push('/404');
@@ -318,18 +358,16 @@ const handleViewUser = ( event) => {
 };
 
 // 发送消息
-const sendMessage = () => {
-  if (!inputValue.value.trim()) return;
-  console.log(route.params.id)
+const sendMessage = async () => {
+  if (!inputValue.value.trim()) return;  
+  
+  // 检查 WebSocket 连接状态
+  if (!checkWebSocketConnection()) {
+    ElMessage.warning('WebSocket 未连接，请点击重新连接按钮');
+    return;
+  }
+
   try {
-    // 检查并尝试重连 WebSocket
-    checkAndReconnectWebSocket();
-
-    if (!chatWS.value || !chatWS.value.ws || chatWS.value.ws.readyState !== WebSocket.OPEN) {
-      ElMessage.error('WebSocket 连接未建立，正在尝试重连...');
-      return;
-    }
-
     // 构造消息体
     const msg = {
       type: 4,
@@ -343,13 +381,13 @@ const sendMessage = () => {
     console.log('发送消息:', msg);
 
     // 通过 WebSocket 发送
-    chatWS.value.ws.send(JSON.stringify(msg));
+    chatWS.value.send(msg);
 
     // 本地显示消息
     messages.value.push({
       side: 'right',
       text: inputValue.value,
-      time: new Date().toISOString(), // 使用 ISO 格式的时间戳
+      time: new Date().toISOString(),
       user: currentChat.value
     });
 
@@ -363,20 +401,13 @@ const sendMessage = () => {
     });
   } catch (error) {
     console.error('发送消息失败:', error);
-    ElMessage.error('发送消息失败');
+    ElMessage.error('发送消息失败，请检查网络连接');
   }
 };
 
-// 组件挂载时检查 WebSocket 连接
+// 组件挂载时初始化
 onMounted(() => {
   scrollToBottom();
-  checkAndReconnectWebSocket();
-});
-
-// 组件卸载时关闭 WebSocket 连接
-onUnmounted(() => {
-  // 不要在这里关闭连接，因为其他组件可能还在使用
-  // 只在用户登出时才关闭连接
 });
 
 // 消息分组计算属性
@@ -424,6 +455,16 @@ const formatMessageDate = (date) => {
   
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
+
+// 手动重连
+const handleManualReconnect = async () => {
+  try {
+    userStore.manualReconnect();
+  } catch (error) {
+    console.error('手动重连失败:', error);
+    ElMessage.error('重连失败，请稍后重试');
+  }
+};
 </script>
 
 <style scoped>
@@ -435,6 +476,23 @@ const formatMessageDate = (date) => {
   color: var(--text-color);
   transition: all var(--transition-duration) ease;
   position: relative;
+}
+
+/* WebSocket 连接状态栏 */
+.connection-status-bar {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 1000;
+  width: 90%;
+  max-width: 500px;
+  margin-top: 10px;
+}
+
+.connection-status-bar .el-alert {
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 /* 顶部用户信息 */

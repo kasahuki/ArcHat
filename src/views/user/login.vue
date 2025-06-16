@@ -48,8 +48,8 @@
           <!-- Register Form -->
           <div v-else class="form">
             <el-form :model="registerForm" ref="registerFormRef">
-              <el-form-item prop="userName">
-                <el-input v-model="registerForm.fullName" placeholder="userName" :prefix-icon="User" />
+              <el-form-item prop="username">
+                <el-input v-model="registerForm.username" placeholder="username" :prefix-icon="User" />
               </el-form-item>
 
               <el-form-item prop="password">
@@ -92,7 +92,7 @@ const loginForm = reactive({
 })
 
 const registerForm = reactive({
-  userName: '',
+  username: '',
   password: '',
   confirmPassword: ''
 })
@@ -135,11 +135,9 @@ const handleLogin = async () => {
   }
 }
 
-
-
 const handleRegister = async () => {
   try {
-    if (!registerForm.userName || !registerForm.password || !registerForm.confirmPassword) {
+    if (!registerForm.username || !registerForm.password || !registerForm.confirmPassword) {
       ElMessage.error('请填写完整的注册信息')
       return
     }
@@ -148,10 +146,16 @@ const handleRegister = async () => {
       ElMessage.error('两次输入的密码不一致')
       return
     }
+
+    if (registerForm.password.length < 6 || registerForm.password.length > 20) {
+      ElMessage.error('密码长度必须在6-20位之间')
+      return
+    }
     
     const res = await registerService({
-      userName: registerForm.userName,
-      password: registerForm.password
+      username: registerForm.username,
+      password: registerForm.password,
+      confirmPassword: registerForm.confirmPassword
     })
     
     if (res.code === 200) {
@@ -159,11 +163,11 @@ const handleRegister = async () => {
       // 切换到登录表单
       showRegister.value = false
       // 清空注册表单
-      registerForm.userName = ''
+      registerForm.username = ''
       registerForm.password = ''
       registerForm.confirmPassword = ''
     } else {
-      ElMessage.error(res.message || '注册失败')
+      ElMessage.error(res.msg || '注册失败')
     }
   } catch (error) {
     ElMessage.error('注册失败，请稍后重试')
