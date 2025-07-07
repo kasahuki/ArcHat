@@ -40,7 +40,22 @@ const router = createRouter({
                     path: '/mail',
                     component: MailBox,
                     name: 'mail',
-                }
+                },
+                {
+                    path: '/aichat',
+                    name: 'AiChat',
+                    component: () => import('@/views/AiChatView.vue')
+                },
+                {
+                    path: '/archives',
+                    name: 'Archives',
+                    component: () => import('@/views/ArchivesView.vue')
+                },
+                {
+                    path: '/groupchat/:id',
+                    name: 'GroupChat',
+                    component: () => import('@/views/chat/GroupChat.vue')
+                },
             ]
         },
         {
@@ -53,6 +68,7 @@ const router = createRouter({
             componnet: silent,
             name: 'silent'
         },
+ 
         // 404页面
         {
             path: '/:pathMatch(.*)*',

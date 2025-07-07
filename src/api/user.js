@@ -20,3 +20,10 @@ export const modifyPwdService = (data)=>{
 export const modifyUsernameService = (data)=>{
   return request.post("/user/modifyName",data)
 }
+
+// 修改头像
+export const modifyAvatarService = (avatarUrl) => {
+  return request.post('/user/modify/avatar', { avatar: avatarUrl });
+}
+
+

@@ -63,7 +63,7 @@
               <span class="id">创建时间: {{ formatDate(item.registerTime) }}</span>
             </div>
             <DangerButton 
-              type="primary" 
+              type="success" 
               @click="handleAddItem(item)"
               :disabled="item.name === currentUser?.username"
             >
@@ -116,12 +116,36 @@
             <el-avatar :size="40" :src="item.avatar" />
             <div class="item-info">
               <span class="name">{{ item.name }}</span>
-              <span class="id">ID: {{ item.id }}</span>
-              <span class="member-count">{{ item.memberCount }}位成员</span>
+     
+              <span class="description">{{ item.description || '暂无群介绍' }}</span>
+              <span class="create-time">创建时间: {{ formatDate(item.createTime) }}</span>
             </div>
-            <DangerButton type="primary" @click="handleAddItem(item)">
-              加入
-            </DangerButton>
+            <el-popover
+              v-model:visible="item.popoverVisible"
+              placement="left"
+              :width="300"
+              trigger="click"
+            >
+              <template #reference>
+                <DangerButton type="success" @click="handleShowPopover(item)">
+                  加入
+                </DangerButton>
+              </template>
+              <div class="apply-input-container">
+                <div class="apply-title">申请加入 {{ item.name }}</div>
+                <el-input
+                  v-model="applyMessage"
+                  type="textarea"
+                  :rows="3"
+                  placeholder="请输入申请信息..."
+                  resize="none"
+                />
+                <div class="apply-buttons">
+                  <DangerButton @click="item.popoverVisible = false">取消</DangerButton>
+                  <DangerButton type="primary" @click="handleSendApplyMessage(item)">发送申请</DangerButton>
+                </div>
+              </div>
+            </el-popover>
           </div>
           
           <div class="pagination-container">
@@ -153,6 +177,7 @@ import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import DangerButton from '@/components/dangerButton.vue';
 import { searchFriends } from '@/api/friend';
 import { addFriend } from '@/api/friend';
+import { searchGroup, applyJoinGroup } from '@/api/room';
 import { useUserInfoStore } from '/src/stores/user';
 import { formatDate } from '@/utils/time';
 import { getLevelBadgeStyle, calculateLevel } from '@/utils/exp';
@@ -307,23 +332,23 @@ const handleGroupSearch = async () => {
   groupHasSearched.value = true;
   
   try {
-    // TODO: 调用群聊搜索接口
-    const res = await searchGroups({
-      keyword: groupSearchQuery.value,
+    const res = await searchGroup({
       page: groupPagination.value.current,
       pageSize: groupPagination.value.pageSize
-    });
+    }, groupSearchQuery.value);
     
     if (res.code === 200) {
       groupSearchResults.value = res.data.records.map(item => ({
-        id: item.id,
+        id: item.roomId,
         name: item.name,
         avatar: item.avatar || '',
-        memberCount: item.memberCount
+        description: item.groupDesc,
+        createTime: item.createTime,
+        popoverVisible: false
       }));
       
       groupPagination.value.total = res.data.total;
-      groupPagination.value.pages = res.data.pages;
+      groupPagination.value.pages = Math.ceil(res.data.total / groupPagination.value.pageSize);
     } else {
       ElMessage.error(res.msg || '搜索失败');
     }
@@ -389,18 +414,59 @@ const handleAddFriend = async (friend) => {
 // 处理加入群聊
 const handleJoinGroup = async (group) => {
   try {
-    // TODO: 实现加入群聊的逻辑
-    ElMessage.success('已发送加入群聊请求');
+    const inputVisible = ref(false);
+    const selectedGroup = ref(group);
+    
+    // 显示输入框
+    inputVisible.value = true;
   } catch (error) {
     console.error('加入群聊失败:', error);
-
+    ElMessage.error('加入群聊失败，请稍后重试');
   }
 };
+
+// 添加响应式变量
+const inputVisible = ref(false);
+const selectedGroup = ref(null);
+const applyMessage = ref('');
 
 // 计算属性：获取弹窗标题
 const getDialogTitle = computed(() => {
   return searchType.value === 'friend' ? '添加好友' : '添加群聊';
 });
+
+// 处理显示弹出框
+const handleShowPopover = (group) => {
+  // 重置申请消息
+  applyMessage.value = '';
+  // 确保其他弹出框都关闭
+  groupSearchResults.value.forEach(item => {
+    if (item.id !== group.id) {
+      item.popoverVisible = false;
+    }
+  });
+};
+
+// 处理发送申请消息
+const handleSendApplyMessage = async (group) => {
+  if (!applyMessage.value.trim()) {
+    ElMessage.warning('请输入申请信息');
+    return;
+  }
+
+  try {
+    await applyJoinGroup({
+      roomId: group.id,
+      msg: applyMessage.value.trim()
+    });
+    ElMessage.success('已发送加入群聊请求');
+    group.popoverVisible = false;
+    applyMessage.value = '';
+  } catch (error) {
+    console.error('发送申请失败:', error);
+    ElMessage.error('发送申请失败，请稍后重试');
+  }
+};
 </script>
 
 <style scoped>
@@ -489,6 +555,21 @@ const getDialogTitle = computed(() => {
   color: var(--el-color-primary);
 }
 
+.description {
+  font-size: 12px;
+  color: var(--el-text-color-regular);
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 400px;
+}
+
+.create-time {
+  font-size: 12px;
+  color: var(--el-text-color-secondary);
+}
+
 .status {
   font-size: 12px;
   display: flex;
@@ -538,5 +619,56 @@ const getDialogTitle = computed(() => {
   cursor: not-allowed;
 }
 
+.apply-input-container {
+  padding: 16px;
+  border-radius: 12px;
+}
 
+.apply-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 16px;
+  color: var(--el-text-color-primary);
+}
+
+.apply-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+/* 暗色模式适配 */
+:deep(.dark-mode) .apply-input-container {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+/* 自定义el-popover样式 */
+:deep(.el-popover.el-popper) {
+  padding: 0;
+  border: none;
+  border-radius: 12px;
+  overflow: hidden;
+  background: transparent;
+  box-shadow: none;
+}
+
+/* 自定义输入框样式 */
+:deep(.el-textarea__inner) {
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.8);
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+:deep(.dark-mode) .el-textarea__inner {
+  background: rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.1);
+  color: var(--el-text-color-primary);
+}
+
+:deep(.el-textarea__inner:focus) {
+  border-color: var(--el-color-primary);
+  box-shadow: 0 0 0 2px rgba(var(--el-color-primary-rgb), 0.2);
+}
 </style> 

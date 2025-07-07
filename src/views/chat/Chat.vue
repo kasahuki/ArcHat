@@ -8,23 +8,24 @@
         type="warning"
         :closable="false"
         show-icon
+
       >
         <template #default>
-          <span>消息可能无法正常发送，请点击重新连接</span>
-          <el-button 
-            type="primary" 
-            size="small" 
+          <span style="color:#409EFF; font-weight:600;">消息可能无法正常发送，请点击重新连接</span>
+          <danger-button
+            type="success"
+            size="small"
             @click="handleManualReconnect"
             :loading="connectionStatus === 'connecting'"
             style="margin-left: 10px;"
           >
             {{ connectionStatus === 'connecting' ? '连接中...' : '重新连接' }}
-          </el-button>
+          </danger-button>
         </template>
       </el-alert>
     </div>
 
-    <!-- 顶部用户信息 -->
+    <!-- 顶部用户信息（仅私聊） -->
     <div class="user-header">
       <div class="user-info">
         <el-avatar :size="40" class="user-avatar" :src="currentChat.avatar"
@@ -44,22 +45,27 @@
     <!-- 聊天显示信息框（可滚动） -->
     <div class="chat-message-list" ref="messagesContainer">
       <template v-if="messages.length > 0">
-        <div v-for="(msg, idx) in messages" :key="idx" class="message-wrapper">
+        <div v-for="(msg, idx) in messages" :key="idx" class="message-wrapper" v-show="!isLoading">
           <!-- 时间显示 -->
           <div v-if="shouldShowTime(msg, idx)" class="message-time-group">
             <span class="time-divider">{{ formatMessageDate(new Date(msg.time)) }}</span>
           </div>
           <div :class="['chat-message-item', msg.side]">
-            <el-avatar v-if="msg.side === 'left'" :size="32" class="user-avatar" :src=currentChat.avatar
+            <el-avatar v-if="msg.side === 'left'" :size="32" class="user-avatar" :src="currentChat.avatar"
               @click="(e) => handleViewUser(e)" />
-            <div class="chat-bubble">{{ msg.text }}</div>
+            <div class="chat-bubble" v-html="linkify(msg.text)"></div>
             <el-avatar v-if="msg.side === 'right'" :size="32" class="user-avatar" :src="userStore.userInfo.avatar" />
           </div>
         </div>
       </template>
       <template v-else>
-        <div class="no-message-tip">没有聊天记录</div>
+        <div class="no-message-tip" v-show="!isLoading">没有聊天记录</div>
       </template>
+      
+      <!-- 加载动画 -->
+      <div v-if="isLoading" class="loading-wrapper">
+        <Loading />
+      </div>
     </div>
 
     <!-- 底部输入区 -->
@@ -75,7 +81,8 @@
         </el-icon>
       </el-button>
       <div class="message-input">
-        <input type="text" v-model="inputValue" placeholder="Type a message..." @keyup.enter.ctrl="sendMessage"
+        <input type="text" v-model="inputValue" placeholder="Type a message..." 
+          @keyup.enter="sendMessage"
           ref="messageInput" />
       </div>
       <el-button class="send-button" @click="sendMessage">
@@ -86,21 +93,21 @@
     </div>
 
     <!-- Emoji 选择器抽屉 -->
-    <el-drawer v-model="showEmojiPicker" title="选择表情" direction="btt" size="400px" :with-header="true"
+    <el-drawer v-model="showEmojiPicker" title="选择表情" direction="btt" size="400px" :with-header="false"
       class="emoji-drawer">
       <emoji-picker @emoji-click="onEmojiSelect" :native="true" :show-preview="true" :show-skin-tones="true"
         :show-search="true" :show-categories="true" :show-recent="true" :recent="recentEmojis"
         :theme="isDarkMode ? 'dark' : 'light'" />
     </el-drawer>
 
-    <!-- 添加用户详情弹窗组件 -->
+    <!-- 用户详情弹窗 -->
     <user-detail-popup v-model:visible="showUserDetail" :user="currentChat" :position="userDetailPosition"
       :hide-start-chat="true" :hide-add-friend="true" />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, watch, onUnmounted, computed, nextTick } from 'vue';
+import { ref, onMounted, watch, onUnmounted, computed, nextTick, h } from 'vue';
 import {
   Microphone,
   ChatRound,
@@ -110,16 +117,19 @@ import {
 import 'emoji-picker-element';
 import { useDark } from '@vueuse/core';
 import UserDetailPopup from '@/components/UserDetailPopup.vue';
-import { ElMessage } from 'element-plus';
+import { ElMessage, ElNotification } from 'element-plus';
 import { useRouter, useRoute } from 'vue-router';
 import { checkFriend } from '@/api/friend';
 import { addPrivateRoom, checkPrivateRoom } from '@/api/room';
 import ChatWebSocket from '@/api/chat.js';
 import { useUserInfoStore } from '@/stores/user';
 import { useContactStore } from '@/stores/contact';
-import { calculateLevel } from '@/utils/exp';
+import { calculateLevel, linkify } from '@/utils/exp';
 import { getMessageList } from '@/api/chatService';
 import emitter from '@/utils/eventBus';
+import Loading from '@/components/loading.vue';
+import clickSound from '@/assets/sounds/click.m4a'
+import dangerButton from '@/components/dangerButton.vue';
 
 const route = useRoute();
 const router = useRouter();
@@ -168,6 +178,41 @@ const chatWS = computed(() => userStore.chatWS);
 // 连接状态
 const connectionStatus = computed(() => userStore.connectionStatus);
 
+// 添加加载状态
+const isLoading = ref(false);
+
+// 在 script setup 顶部添加
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let messageSound = null;
+
+// 添加音频初始化函数
+const initAudio = async () => {
+  try {
+    await audioContext.resume();
+    // 创建新的音频实例
+    messageSound = new Audio();
+    // 使用导入的音频文件
+    messageSound.src = clickSound;
+    messageSound.volume = 1.0;
+    messageSound.preload = 'auto';
+    
+    // 等待音频加载完成
+        await new Promise((resolve, reject) => {
+      messageSound.addEventListener('canplaythrough', resolve, { once: true });
+      messageSound.addEventListener('error', (e) => {
+        console.error('音频加载错误:', e);
+        console.error('音频URL:', messageSound.src);
+        reject(e);
+      }, { once: true });
+      messageSound.load();
+        });
+    
+    console.log('音频初始化成功');
+      } catch (error) {
+    console.error('音频初始化失败:', error);
+  }
+};
+
 // 检查 WebSocket 连接状态
 const checkWebSocketConnection = () => {
   return chatWS.value && typeof chatWS.value.isConnected === 'function' && chatWS.value.isConnected();
@@ -183,65 +228,6 @@ const scrollToBottom = () => {
   });
 };
 
-// 监听 WebSocket 消息
-watch(chatWS, (newWS, oldWS) => {
-  console.log('chatWS 发生变化:', {
-    新WS: newWS,
-    旧WS: oldWS,
-    新WS存在: !!newWS,
-    新WS_ws存在: !!(newWS && newWS.ws)
-  });
-  
-  if (newWS) {
-    console.log('设置 WebSocket 消息处理回调');
-    // 使用 chat.js 中的 onMessage 回调机制，不覆盖原始的 onmessage
-    newWS.onMessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        console.log('Chat.vue 通过回调处理消息:', data);
-
-        // 根据消息类型处理
-        switch (data.type) {
-          case 1000: // 聊天消息
-            console.log('Chat.vue 处理聊天消息:', data.data);
-            if (data.data) {
-              const messageData = data.data;
-              console.log('准备添加消息到列表，当前消息数量:', messages.value.length);
-              
-              // 添加到消息列表
-              messages.value.push({
-                side: 'left',
-                text: messageData,
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-              });
-              
-              console.log('消息已添加，当前消息数量:', messages.value.length);
-              console.log('最新消息:', messages.value[messages.value.length - 1]);
-              
-              // 强制触发响应式更新
-              nextTick(() => {
-                scrollToBottom();
-              });
-            }
-            break;
-          case 2: // 心跳包
-            console.log('Chat.vue 收到心跳包');
-            break;
-          default:
-            console.log('Chat.vue 未知消息类型:', data.type);
-        }
-      } catch (error) {
-        console.error('Chat.vue 处理消息失败:', error);
-      }
-    };
-  }
-}, { immediate: true });
-
-// 监听消息列表变化
-watch(messages, () => {
-  scrollToBottom();
-}, { deep: true });
-
 // 检查并处理聊天
 const checkAndHandleChat = async (userId) => {
   try {
@@ -256,6 +242,7 @@ const checkAndHandleChat = async (userId) => {
     const roomRes = await checkPrivateRoom(userId);
     if (roomRes.code === 200 && roomRes.data === true) {
       // 如果房间已存在，直接跳转到该房间
+
       return;
     } else {
       // 创建私聊房间
@@ -276,19 +263,19 @@ const checkAndHandleChat = async (userId) => {
 // 获取历史消息
 const getHistoryMessages = async (roomId) => {
   try {
+    isLoading.value = true;
     const res = await getMessageList({ roomId });
     if (res.code === 200) {
       // 将历史消息转换为前端显示格式
       const historyMessages = res.data.map(msg => ({
         side: msg.fromUid === userStore.userInfo.uid ? 'right' : 'left',
         text: msg.content,
-        time: msg.createTime, // 直接使用后端返回的时间
+        time: msg.createTime,
         id: msg.id,
         status: msg.status,
         type: msg.type
       }));
       messages.value = historyMessages;
-      // 滚动到底部
       scrollToBottom();
     } else {
       ElMessage.error(res.msg || '获取历史消息失败');
@@ -296,6 +283,8 @@ const getHistoryMessages = async (roomId) => {
   } catch (error) {
     console.error('获取历史消息错误:', error);
     ElMessage.error('获取历史消息失败，请稍后重试');
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -303,29 +292,38 @@ const getHistoryMessages = async (roomId) => {
 watch(
   () => route.params.id,
   async (newId) => {
-    if (newId) {
+    if (route.path.startsWith('/chat/') && newId) {
+      isLoading.value = true;
       await checkAndHandleChat(newId);
-      // 设置当前聊天对象
-      contactStore.setCurrentChat(newId);
-      // 获取当前聊天对象信息
-      const chatUser = contactStore.getContactById(newId);
-      console.log(chatUser)
-      if (chatUser) {
+      try {
+        // 从 contactStore 中获取当前聊天的联系人信息
+        const chatUser = contactStore.getContactById(newId);
+        console.log('chatUser', chatUser);
+        // 设置当前聊天对象
+        contactStore.setCurrentChat(newId);
+
+        // 私聊数据模型
         currentChat.value = {
           id: chatUser.id,
           roomId: chatUser.roomId,
           name: chatUser.username,
           avatar: chatUser.avatar,
           status: chatUser.status,
-          level: calculateLevel(chatUser.exep),
-          createTime:chatUser.createTime
+          level: chatUser.exep ? calculateLevel(chatUser.exep) : '',
+          createTime: chatUser.createTime
         };
+
         // 获取历史消息
         if (chatUser.roomId) {
           await getHistoryMessages(chatUser.roomId);
         }
+        scrollToBottom();
+      } catch (error) {
+        console.error('切换会话错误:', error);
+        ElMessage.error('切换会话失败，请稍后重试');
+      } finally {
+        isLoading.value = false;
       }
-      scrollToBottom();
     }
   },
   {
@@ -334,6 +332,158 @@ watch(
     flush: 'post'
   }
 );
+
+// 组件挂载时初始化
+onMounted(() => {
+  console.log('Chat 组件挂载，设置消息监听');
+
+  emitter.on('chat-message', (messageData) => {
+    console.log('Chat 组件收到聊天消息:', messageData);
+    
+    // 检查是否在当前聊天界面
+    const isInCurrentChat = currentChat.value && currentChat.value.id === messageData.fromUid;
+    console.log('当前聊天状态:', {
+      currentChatId: currentChat.value?.id,
+      messageFromUid: messageData.fromUid,
+      isInCurrentChat
+    });
+    
+    // 如果不在当前聊天界面，显示通知
+    if (!isInCurrentChat) {
+      // 从联系人列表中获取发送者信息
+      const sender = contactStore.getContactById(messageData.fromUid);
+      if (sender) {
+        // 播放提示音
+        const playSound = async () => {
+          try {
+            if (!messageSound) {
+              await initAudio();
+            }
+            
+            // 确保音频上下文已恢复
+            await audioContext.resume();
+            // 确保音量最大
+            messageSound.volume = 1.0;
+            // 重置音频到开始位置
+            messageSound.currentTime = 0;
+            // 播放音频
+            await messageSound.play();
+          } catch (error) {
+            console.error('播放提示音失败:', error);
+            // 如果播放失败，尝试重新初始化
+            messageSound = null;
+          }
+        };
+
+        // 调用播放函数
+        playSound();
+        
+        // 使用 ElNotification 显示通知
+        const notification = ElNotification({
+          title: '新消息',
+          message: `${sender.username} 给您发送了一条消息`,
+          type: 'info',
+          duration: 3000,
+          position: 'top-right',
+          customClass: 'apple-notification',
+          onClick: () => {
+            // 设置当前聊天对象
+            contactStore.setCurrentChat(sender.id);
+            // 使用发送者的ID进行跳转
+            router.push(`/chat/${sender.id}`);
+            // 触发刷新 mail 数据的事件
+            emitter.emit('refresh-mail-data');
+            notification.close();
+          }
+        });
+      }
+    } else {
+      // 在当前聊天界面时添加消息
+      console.log('添加消息到当前聊天:', messageData);
+      messages.value.push({
+        side: messageData.fromUid === userStore.userInfo.uid ? 'right' : 'left',
+        text: messageData.content,
+        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      });
+      
+      // 强制触发响应式更新并滚动到底部
+      nextTick(() => {
+        scrollToBottom();
+      });
+    }
+  });
+
+  // 监听消息列表变化
+  watch(messages, () => {
+    scrollToBottom();
+  }, { deep: true });
+
+  // 在组件挂载时初始化音频
+  const handleUserInteraction = async () => {
+    await initAudio();
+    // 移除事件监听
+    document.removeEventListener('click', handleUserInteraction);
+    document.removeEventListener('touchstart', handleUserInteraction);
+  };
+
+  // 添加事件监听
+  document.addEventListener('click', handleUserInteraction);
+  document.addEventListener('touchstart', handleUserInteraction);
+});
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  console.log('Chat 组件卸载，移除消息监听');
+  emitter.off('chat-message');
+});
+
+// 发送消息
+const sendMessage = async () => {
+  if (!inputValue.value.trim()) return;  
+  
+  // 检查 WebSocket 连接状态
+  if (!checkWebSocketConnection()) {
+    ElMessage.warning('WebSocket 未连接，请点击重新连接按钮');
+    return;
+  }
+
+  try {
+    // 构造消息体
+    const msg = {
+      type: 4,
+      data: {
+        type: 1,
+        targetUid: currentChat.value.id, // 使用好友的ID
+        roomId: currentChat.value.roomId,
+        content: inputValue.value
+      }
+    };
+    console.log('发送消息:', msg);
+
+    // 通过 WebSocket 发送
+    chatWS.value.send(msg);
+
+    // 本地显示消息
+    messages.value.push({
+      side: 'right',
+      text: inputValue.value,
+      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+    });
+
+    inputValue.value = '';
+
+    // 发送后让输入框获得焦点
+    nextTick(() => {
+      if (messageInput.value) {
+        messageInput.value.focus();
+      }
+      scrollToBottom();
+    });
+  } catch (error) {
+    console.error('发送消息失败:', error);
+    ElMessage.error('发送消息失败，请检查网络连接');
+  }
+};
 
 const onEmojiSelect = (event) => {
   const emoji = event.detail.unicode;
@@ -356,59 +506,6 @@ const handleViewUser = ( event) => {
 
   showUserDetail.value = true;
 };
-
-// 发送消息
-const sendMessage = async () => {
-  if (!inputValue.value.trim()) return;  
-  
-  // 检查 WebSocket 连接状态
-  if (!checkWebSocketConnection()) {
-    ElMessage.warning('WebSocket 未连接，请点击重新连接按钮');
-    return;
-  }
-
-  try {
-    // 构造消息体
-    const msg = {
-      type: 4,
-      data: {
-        type: 1,
-        targetUid: route.params.id,
-        roomId: currentChat.value.roomId,
-        content: inputValue.value
-      }
-    };
-    console.log('发送消息:', msg);
-
-    // 通过 WebSocket 发送
-    chatWS.value.send(msg);
-
-    // 本地显示消息
-    messages.value.push({
-      side: 'right',
-      text: inputValue.value,
-      time: new Date().toISOString(),
-      user: currentChat.value
-    });
-
-    inputValue.value = '';
-
-    // 发送后让输入框获得焦点
-    nextTick(() => {
-      if (messageInput.value) {
-        messageInput.value.focus();
-      }
-    });
-  } catch (error) {
-    console.error('发送消息失败:', error);
-    ElMessage.error('发送消息失败，请检查网络连接');
-  }
-};
-
-// 组件挂载时初始化
-onMounted(() => {
-  scrollToBottom();
-});
 
 // 消息分组计算属性
 const groupedMessages = computed(() => {
@@ -467,414 +564,4 @@ const handleManualReconnect = async () => {
 };
 </script>
 
-<style scoped>
-.chat-container {
-  display: flex;
-  flex-direction: column;
-  height: 95vh;
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  transition: all var(--transition-duration) ease;
-  position: relative;
-}
-
-/* WebSocket 连接状态栏 */
-.connection-status-bar {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 1000;
-  width: 90%;
-  max-width: 500px;
-  margin-top: 10px;
-}
-
-.connection-status-bar .el-alert {
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-/* 顶部用户信息 */
-.user-header {
-  padding: 16px 24px;
-  background-color: transparent;
-  border-bottom: 1px solid var(--border-color);
-  transition: all var(--transition-duration) ease;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-}
-
-.user-avatar {
-  margin-right: 12px;
-  cursor: pointer;
-  transition: transform 0.3s ease;
-}
-
-.user-avatar:hover {
-  transform: scale(1.1);
-}
-
-.user-name {
-  font-weight: 600;
-  font-size: 16px;
-  margin-bottom: 4px;
-  color: var(--text-color);
-  transition: color var(--transition-duration) ease;
-}
-
-.user-subtitle {
-  font-weight: normal;
-  color: var(--text-color-secondary);
-  transition: color var(--transition-duration) ease;
-}
-
-.user-status {
-  display: flex;
-  align-items: center;
-  font-size: 14px;
-  color: var(--success-color);
-  transition: color var(--transition-duration) ease;
-}
-
-.status-dot {
-  width: 8px;
-  height: 8px;
-  background-color: var(--success-color);
-  border-radius: 50%;
-  margin-right: 6px;
-  transition: background-color var(--transition-duration) ease;
-}
-
-.status.online {
-  color: var(--success-color);
-}
-
-/* 聊天消息列表 */
-.chat-message-list {
-  flex: 1;
-  min-height: 200px;
-  max-height: none;
-  overflow-y: auto;
-  padding: 24px 24px 10px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
-  background-color: transparent;
-  background-image: url("/src/assets/image/login.jpg");
-  background-size: cover;
-  background-position: center;
-  background-repeat: no-repeat;
-  border-radius: 12px;
-  margin: 18px 10px 0 24px;
-  font-family: 'Helvetica Neue', Arial, sans-serif;
-  transition: all var(--transition-duration) ease;
-}
-
-/* 暗色模式背景图 */
-.dark-mode .chat-message-list {
-  background-image: url("/src/assets/image/login-dark.jpg");
-}
-
-/* 自定义滚动条样式 */
-.chat-message-list::-webkit-scrollbar {
-  width: 2px;
-}
-
-.chat-message-list::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.chat-message-list::-webkit-scrollbar-thumb {
-  background-color: rgba(64, 158, 255, 0.3);
-  border-radius: 3px;
-  transition: all 0.3s ease;
-}
-
-.chat-message-list::-webkit-scrollbar-thumb:hover {
-  background-color: rgba(64, 158, 255, 0.5);
-}
-
-.message-wrapper {
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-}
-
-.message-time-group {
-  width: 100%;
-  display: flex;
-  justify-content: center;
-  margin: 8px 0;
-  position: relative;
-  z-index: 1;
-}
-
-.time-divider {
-  background-color: rgba(0, 0, 0, 0.1);
-  color: var(--text-color-secondary);
-  padding: 4px 12px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: 500;
-  display: inline-block;
-}
-
-.dark-mode .time-divider {
-  background-color: rgba(255, 255, 255, 0.1);
-}
-
-.chat-message-item {
-  width: 100%;
-  display: flex;
-  align-items: flex-start;
-  margin: 4px 0;
-  padding: 0 16px;
-}
-
-.chat-message-item.left {
-  justify-content: flex-start;
-}
-
-.chat-message-item.right {
-  justify-content: flex-end;
-}
-
-.chat-bubble {
-  max-width: 70%;
-  padding: 10px 14px;
-  border-radius: 16px;
-  font-size: 14px;
-  line-height: 1.5;
-  word-break: break-word;
-  position: relative;
-  margin: 0 12px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-}
-
-.chat-bubble::before {
-  content: '';
-  position: absolute;
-  top: 12px;
-  width: 0;
-  height: 0;
-  border: 6px solid transparent;
-}
-
-.chat-message-item.left .chat-bubble {
-  background-color: #e1f3ff;
-  color: #333;
-  border-top-left-radius: 4px;
-}
-
-.chat-message-item.left .chat-bubble::before {
-  left: -12px;
-  border-right-color: #e1f3ff;
-}
-
-.chat-message-item.right .chat-bubble {
-  background-color: #95ec69;
-  color: #333;
-  border-top-right-radius: 4px;
-}
-
-.chat-message-item.right .chat-bubble::before {
-  right: -12px;
-  border-left-color: #95ec69;
-}
-
-.dark-mode .chat-message-item.left .chat-bubble {
-  background-color: #1a3a4a;
-  color: #fff;
-}
-
-.dark-mode .chat-message-item.left .chat-bubble::before {
-  border-right-color: #1a3a4a;
-}
-
-.dark-mode .chat-message-item.right .chat-bubble {
-  background-color: #1a6e3d;
-  color: #fff;
-}
-
-.dark-mode .chat-message-item.right .chat-bubble::before {
-  border-left-color: #1a6e3d;
-}
-
-.user-avatar {
-  flex-shrink: 0;
-  cursor: pointer;
-  border: 2px solid transparent;
-  transition: border-color 0.3s;
-}
-
-.user-avatar:hover {
-  border-color: var(--primary-color);
-}
-
-.no-message-tip {
-  text-align: center;
-  color: var(--text-color-secondary);
-  margin: auto;
-  font-size: 14px;
-  font-weight: 400;
-  letter-spacing: 0.3px;
-  transition: color var(--transition-duration) ease;
-}
-
-/* 底部输入区 */
-.message-input-container {
-  display: flex;
-  align-items: center;
-  padding: 16px 24px;
-  background-color: transparent;
-  border-top: none;
-  transition: all var(--transition-duration) ease;
-  gap: 0px;
-  margin-top: auto;
-  position: relative;
-  max-width: 100%;
-}
-
-.input-icon-btn {
-  background: transparent;
-  border: none;
-  color: var(--text-color-secondary);
-  font-size: 20px;
-  padding: 8px;
-  border-radius: 50%;
-  transition: all var(--transition-duration) ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  position: relative;
-}
-
-.input-icon-btn:hover {
-  color: var(--primary-color);
-  background: none;
-}
-
-.message-input {
-  flex: 1;
-  position: relative;
-  margin: 0 8px;
-}
-
-.message-input input {
-  width: 100%;
-  height: 44px;
-  background-color: var(--sidebar-bg);
-  border: 1px solid var(--border-color);
-  border-radius: 22px;
-  padding: 0 20px;
-  color: var(--text-color);
-  font-size: 14px;
-  transition: all var(--transition-duration) ease;
-}
-
-.message-input input::placeholder {
-  color: var(--text-color-secondary);
-}
-
-.message-input input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.1);
-}
-
-.send-button {
-  position: absolute;
-  right: 8px;
-  top: 50%;
-  transform: translateY(-50%);
-  background: none;
-  border: none;
-  color: var(--text-color-secondary);
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all var(--transition-duration) ease;
-  cursor: pointer;
-  flex-shrink: 0;
-  z-index: 1;
-}
-
-.send-button:hover {
-  color: var(--primary-color);
-  background: none;
-  transform: translateY(-50%) scale(1.1);
-}
-
-.send-button:active {
-  transform: translateY(-50%) scale(0.95);
-}
-
-/* 添加 emoji 选择器样式 */
-.emoji-drawer {
-  --el-drawer-bg-color: var(--bg-color);
-  --el-drawer-padding-primary: 0;
-}
-
-.emoji-drawer :deep(.el-drawer__header) {
-  margin-bottom: 0;
-  padding: 16px;
-  border-bottom: 1px solid var(--border-color);
-  color: var(--text-color);
-}
-
-.emoji-drawer :deep(.el-drawer__body) {
-  padding: 0;
-}
-
-emoji-picker {
-  width: 100%;
-  height: 100%;
-  --background: var(--bg-color);
-  --border-color: var(--border-color);
-  --button-active-background: var(--primary-color);
-  --category-emoji-padding: 0.5rem;
-  --category-emoji-size: 1.5rem;
-  --category-font-color: var(--text-color);
-  --category-font-size: 0.8rem;
-  --indicator-color: var(--primary-color);
-  --num-columns: 8;
-  --outline-color: var(--border-color);
-  --outline-size: 1px;
-  --padding: 0.5rem;
-  --preview-background: var(--bg-color);
-  --preview-font-color: var(--text-color);
-  --preview-font-size: 1rem;
-  --preview-padding: 0.5rem;
-  --search-background: var(--sidebar-bg);
-  --search-border-color: var(--border-color);
-  --search-font-color: var(--text-color);
-  --search-font-size: 1rem;
-  --search-padding: 0.5rem;
-  --search-placeholder-color: var(--text-color-secondary);
-  --search-results-background: var(--bg-color);
-  --search-results-font-color: var(--text-color);
-  --search-results-font-size: 1rem;
-  --search-results-padding: 0.5rem;
-  --skin-tone-picker-background: var(--bg-color);
-  --skin-tone-picker-border-color: var(--border-color);
-  --skin-tone-picker-font-color: var(--text-color);
-  --skin-tone-picker-font-size: 1rem;
-  --skin-tone-picker-padding: 0.5rem;
-  --skin-tone-picker-width: 100%;
-  transition: all var(--transition-duration) ease;
-}
-
-/* 确保弹窗样式正确 */
-:deep(.user-detail-popup) {
-  z-index: 9999;
-}
-</style>
+<style scoped src="@/assets/styles/chat.css"></style>

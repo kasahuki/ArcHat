@@ -1,4 +1,4 @@
-import ElementPlus from 'element-plus'
+import ElementPlus, { ElInfiniteScroll } from 'element-plus'
 import 'element-plus/dist/index.css'
 import './assets/styles/theme.css'
 
@@ -16,6 +16,7 @@ pinia.use(piniaPluginPersistedstate)
 app.use(pinia)
 app.use(router)
 app.use(ElementPlus)
+app.use(ElInfiniteScroll)
 
 // 初始化主题
 import { useThemeStore } from './stores/theme'

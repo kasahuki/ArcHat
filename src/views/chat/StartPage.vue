@@ -5,7 +5,7 @@
         <div class="welcome-header">
           <img src="/src/assets/image/peoples.svg" class="welcome-image" alt="people decoration" />
           <h1>欢迎来到 ArcChat<span><img src="/src/assets/image/archat.png" alt="" width="10%"></span></h1>
-          <p class="subtitle">开启即时通讯之旅</p>
+          <p class="subtitle">开启即时通讯之旅</p> <span style="margin-top: 10px;"> <WaterButton scale="0.79" @click="handleLoginDelay"/></span>
         </div>
       </div>
       
@@ -46,6 +46,14 @@
 
 <script setup>
 import { User, ChatDotRound, Setting } from '@element-plus/icons-vue'
+import WaterButton from '@/components/WaterButton.vue'
+import { useRouter } from 'vue-router'
+const router = useRouter()
+const handleLoginDelay = () => {
+  setTimeout(() => {
+    router.push('/login')
+  }, 1500)
+}
 </script>
 
 <style scoped>

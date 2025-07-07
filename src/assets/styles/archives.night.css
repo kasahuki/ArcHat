@@ -1,0 +1,19 @@
+/* 夜间模式专用样式 */
+
+
+.dark-mode .drawing-board-header-apple {
+  background: rgba(36, 67, 134, 0.98);
+}
+
+.dark-mode .drawing-board-header-apple h1 {
+  color: #fdfdfd ;
+}
+
+.dark-mode .archives-title {
+  color: #17f86d;
+
+}
+.dark-mode .flash-footer {
+  background: #021132;
+
+}

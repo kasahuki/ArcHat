@@ -1,58 +1,60 @@
 <template>
-  <div v-if="visible" class="user-detail-popup" :style="popupStyle" ref="popupRef">
-    <div class="user-detail-content">
-      <!-- Mac窗口控制按钮 -->
-      <MacWindowControls @close="handleClose" />
+  <teleport to="body">
+    <div v-if="visible" class="user-detail-popup" :style="popupStyle" ref="popupRef">
+      <div class="user-detail-content">
+        <!-- Mac窗口控制按钮 -->
+        <MacWindowControls @close="handleClose" />
 
-      <!-- 用户基本信息 -->
-      <div class="user-header">
-        <el-avatar :size="60" :src="user.avatar" />
-        <div class="user-info">
-          <div class="user-name-level">
-            <h3>{{ user.name }}</h3>
-            <div class="level-badge" :style="levelStyle">
-              Lv.{{ user.level }}
+        <!-- 用户基本信息 -->
+        <div class="user-header">
+          <el-avatar :size="60" :src="user.avatar" />
+          <div class="user-info">
+            <div class="user-name-level">
+              <h3>{{ user.name }}</h3>
+              <div class="level-badge" :style="levelStyle">
+                Lv.{{ user.level }}
+              </div>
             </div>
+            <p class="user-status" :class="{ 'online': user.status, 'offline': !user.status }">
+              <el-icon class="status-icon"><CircleCheck v-if="user.status" /><CircleClose v-else /></el-icon>
+              {{ user.status ? '在线' : '离线' }}
+            </p>
           </div>
-          <p class="user-status" :class="{ 'online': user.status, 'offline': !user.status }">
-            <el-icon class="status-icon"><CircleCheck v-if="user.status" /><CircleClose v-else /></el-icon>
-            {{ user.status ? '在线' : '离线' }}
-          </p>
         </div>
-      </div>
 
-      <!-- 操作按钮 -->
-      <div class="user-actions" v-if="!hideAddFriend && !hideStartChat">
-        <el-button 
-          v-if="!user.isFriend && !hideAddFriend" 
-          type="primary" 
-          @click="handleAddFriend"
-          :loading="addingFriend"
-          class="action-button"
-        >
-          <el-icon><Plus /></el-icon>
-          添加好友
-        </el-button>
-        <el-button 
-          v-else-if="user.isFriend && !hideStartChat" 
-          type="primary" 
-          @click="handleStartChat"
-          class="action-button"
-        >
-          <el-icon><ChatDotRound /></el-icon>
-          开始聊天
-        </el-button>
-      </div>
+        <!-- 操作按钮 -->
+        <div class="user-actions" v-if="!hideAddFriend && !hideStartChat">
+          <el-button 
+            v-if="!user.isFriend && !hideAddFriend" 
+            type="primary" 
+            @click="handleAddFriend"
+            :loading="addingFriend"
+            class="action-button"
+          >
+            <el-icon><Plus /></el-icon>
+            添加好友
+          </el-button>
+          <DangerButton 
+            v-else-if="user.isFriend && !hideStartChat" 
+            type="primary" 
+            @click="handleStartChat"
+            class="action-button"
+          >
+            <el-icon><ChatDotRound /></el-icon>
+            开始聊天
+          </DangerButton>
+        </div>
 
-      <!-- 用户详细信息 -->
-      <div class="user-details">
-        <div class="detail-item">
-          <span class="label">注册时间</span>
-          <span class="value">{{ formatDate(user.createTime) }}</span>
+        <!-- 用户详细信息 -->
+        <div class="user-details">
+          <div class="detail-item">
+            <span class="label">注册时间</span>
+            <span class="value">{{ formatDate(user.createTime) }}</span>
+          </div>
         </div>
       </div>
     </div>
-  </div>
+  </teleport>
 </template>
 
 <script setup>
@@ -64,6 +66,7 @@ import { formatDate } from '@/utils/time';
 import MacWindowControls from './MacWindowControls.vue';
 import { addFriend } from '@/api/friend';
 import { ElMessage } from 'element-plus';
+import DangerButton from '@/components/dangerButton.vue';
 
 const props = defineProps({
   visible: {
@@ -177,7 +180,7 @@ onUnmounted(() => {
 
 .user-detail-popup {
   position: fixed;
-  z-index: 9999;
+  z-index: 19999 !important;
   background: var(--light-sidebar-bg);
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);

@@ -250,17 +250,6 @@ body {
     inset 0 1px 2px rgba(255, 255, 255, 0.1);
 }
 
-.icon-bar {
-  background: var(--dark-sidebar-bg);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  padding-top: 20px;
-  z-index: 2;
-  overflow: hidden !important;
-  position: relative;
-}
-
 .sidebar-nav {
   display: flex;
   flex-direction: column;
@@ -278,15 +267,12 @@ body {
   margin-bottom: 12px;
   border-radius: 8px;
   cursor: pointer;
-  color: var(--light-secondary-text);
+  color: #f38071 !important;
 }
 
-.dark-mode .nav-item {
-  color: var(--dark-secondary-text);
-}
 
 .nav-item.active {
-  background-color: var(--primary-color);
+  background-color: rgb(27, 33, 82);
   color: white;
 }
 

@@ -5,6 +5,17 @@
       
       <!-- 第一部分：图标栏 -->
       <el-aside width="64px" class="icon-bar">
+        <!-- 折叠/展开按钮 -->
+        <div 
+          class="sidebar-toggle-btn"
+          @click="isSidebarCollapse = !isSidebarCollapse"
+          :class="{ 'collapsed': isSidebarCollapse }"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 48 48">
+            <path fill="#2E7D32" d="M6 22h4v4H6zm0-8h4v4H6zm0 16h4v4H6zm0 32h4v4H6zm8-16h28v4H14zm0-8h28v4H14zm0 16h28v4H14zm0-24h28v4H14z"/>
+          </svg>
+        </div>
+        
         <!-- 添加用户头像 -->
         <div class="user-avatar-container" @click="handleIconClick('user', '/UserHub')">
           <el-avatar :size="40" :src="userInfo.avatar"></el-avatar>
@@ -50,7 +61,7 @@
               <el-icon><Search /></el-icon>
             </template>
             <template #suffix>
-              <el-icon class="search-send-icon" @click="handleSearch"><Position /></el-icon>
+              <el-icon class="search-send-icon"><Position /></el-icon>
             </template>
           </el-input>
         </div>
@@ -76,92 +87,113 @@
         </div>
         <div v-if="!isSidebarCollapse" class="conversation-list">
           <template v-if="currentView === 'friends'">
-            <template v-if="contactList.length > 0">
-              <div 
-                v-for="contact in contactList" 
-                :key="contact.id" 
-                class="conversation-item"
-                :class="{ 'active': route.params.id === contact.friendId.toString() }"
-                @click="handleChat(contact)"
-              >
-                <div class="conversation-avatar">
-                  <el-avatar :size="40" :src="contact.avatar"></el-avatar>
-                  <div class="online-status" :class="{ 'online': contact.status }">
-                    <span class="status-dot"></span>
-                  </div>
-                </div>
-                <div class="conversation-content">
-                  <div class="conversation-header">
-                    <span class="company-name">{{ contact.username }}</span>
-                    <div v-if="contact.readTime && contact.activeTime && new Date(contact.activeTime) > new Date(contact.readTime)" class="message-time">
-                      <span>{{ formatMessageTime(contact.activeTime) }}</span>
+            <div
+              class="scroll-wrapper"
+              v-infinite-scroll="loadMore"
+              :infinite-scroll-disabled="isLoading || noMoreData"
+              :infinite-scroll-distance="20"
+              style="height: 100%; overflow-y: auto;"
+            >
+              <template v-if="filteredContacts.length > 0">
+                <div 
+                  v-for="contact in filteredContacts" 
+                  :key="contact.id" 
+                  class="conversation-item"
+                  :class="{ 'active': route.params.id === contact.id.toString() }"
+                  @click="handleChat(contact)"
+                >
+                  <div class="conversation-avatar">
+                    <el-avatar :size="40" :src="contact.avatar"></el-avatar>
+                    <div class="online-status" :class="{ 'online': contact.status }">
+                      <span class="status-dot"></span>
                     </div>
                   </div>
-                  <div class="message-preview">
-                    {{ contact.lastMsgId ? (messagePreviews.get(contact.friendId) || '加载中...') : '暂无消息' }}
+                  <div class="conversation-content">
+                    <div class="conversation-header">
+                      <span class="company-name">{{ contact.username }}</span>
+                      <div v-if="contact.readTime && contact.activeTime && new Date(contact.activeTime) > new Date(contact.readTime)" class="message-time">
+                        <span>{{ formatMessageTime(contact.activeTime) }}</span>
+                      </div>
+                    </div>
+                    <div class="message-preview">
+                      {{ contact.lastMsgId ? (messagePreviews.get(contact.id) || '加载中...') : '暂无消息' }}
+                    </div>
                   </div>
                 </div>
+              </template>
+              <div v-else-if="searchQuery" class="empty-conversation">
+                <div class="empty-content">
+                  <el-icon class="empty-icon"><Search /></el-icon>
+                  <h3>未找到相关联系人</h3>
+                  <p>换个关键词试试吧</p>
+                </div>
               </div>
-            </template>
-            <div v-else class="empty-conversation">
-              <div class="empty-content">
-                <el-icon class="empty-icon"><ChatDotRound /></el-icon>
-                <h3>还没有聊天记录</h3>
-                <p>快去和好友聊天吧</p>
+              <div v-else class="empty-conversation">
+                <div class="empty-content">
+                  <el-icon class="empty-icon"><ChatDotRound /></el-icon>
+                  <h3>还没有聊天记录</h3>
+                  <p>快去和好友聊天吧</p>
+                </div>
               </div>
+              <div v-if="isLoading" style="text-align:center;padding:8px;color:#999;">加载中...</div>
+              <div v-if="noMoreData && filteredContacts.length > 0" style="text-align:center;padding:8px;color:#999;">没有更多了</div>
             </div>
           </template>
           <template v-else>
-            <template v-if="groupList.length > 0">
-              <div 
-                v-for="(group, index) in groupList" 
-                :key="index" 
-                class="conversation-item"
-                :class="{ 'active': group.name === '开发群' }"
-              >
-                <div class="conversation-avatar">
-                  <el-avatar :size="40" :src="group.avatar"></el-avatar>
-                </div>
-                <div class="conversation-content">
-                  <div class="conversation-header">
-                    <span class="company-name">{{ group.name }}</span>
-                    <span class="timestamp">{{ group.time }}</span>
+            <div
+              class="scroll-wrapper"
+              v-infinite-scroll="loadMoreGroups"
+              :infinite-scroll-disabled="isLoadingGroups || noMoreGroups"
+              :infinite-scroll-distance="20"
+              style="height: 100%; overflow-y: auto;"
+            >
+              <template v-if="filteredGroups.length > 0">
+                <div 
+                  v-for="group in filteredGroups" 
+                  :key="group.roomId" 
+                  class="conversation-item"
+                  :class="{ 'active': route.params.id === group.roomId?.toString() }"
+                  @click="handleGroupChat(group)"
+                >
+                  <div class="conversation-avatar">
+                    <el-avatar :size="40" :src="group.avatar"></el-avatar>
                   </div>
-                  <div class="message-preview">{{ group.message }}</div>
+                  <div class="conversation-content">
+                    <div class="conversation-header">
+                      <span class="company-name">{{ group.name }}</span>
+                      <span class="timestamp">{{ group.activeTime ? formatMessageTime(group.activeTime) : '' }}</span>
+                    </div>
+                    <div class="message-preview">{{ group.lastMsgId ? '有新消息' : '暂无消息' }}</div>
+                  </div>
                 </div>
-                <div v-if="group.unread" class="unread-badge">
-                  <span>{{ group.unread }}</span>
+              </template>
+              <div v-else-if="searchQuery" class="empty-conversation">
+                <div class="empty-content">
+                  <el-icon class="empty-icon"><Search /></el-icon>
+                  <h3>未找到相关群聊</h3>
+                  <p>换个关键词试试吧</p>
                 </div>
               </div>
-            </template>
-            <div v-else class="empty-conversation">
-              <div class="empty-content">
-                <el-icon class="empty-icon"><UserFilled /></el-icon>
-                <h3>还没有群聊</h3>
-                <p>创建或加入一个群聊吧</p>
+              <div v-else class="empty-conversation">
+                <div class="empty-content">
+                  <el-icon class="empty-icon"><UserFilled /></el-icon>
+                  <h3>还没有群聊</h3>
+                  <p>创建或加入一个群聊吧</p>
+                </div>
               </div>
+              <div v-if="isLoadingGroups" style="text-align:center;padding:8px;color:#999;">加载中...</div>
+              <div v-if="noMoreGroups && filteredGroups.length > 0" style="text-align:center;padding:8px;color:#999;">没有更多了</div>
             </div>
           </template>
         </div>
       </el-aside>
 
-
-
-      <!-- 折叠后显示展开按钮 -->
-      <div
-        v-if="isSidebarCollapse"
-        class="sidebar-expand-btn"
-        @click="isSidebarCollapse = false"
-      >
-      <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 1024 1024"><path fill="currentColor" d="M338.752 104.704a64 64 0 0 0 0 90.496l316.8 316.8l-316.8 316.8a64 64 0 0 0 90.496 90.496l362.048-362.048a64 64 0 0 0 0-90.496L429.248 104.704a64 64 0 0 0-90.496 0"/></svg>
- 
-      </div>
       <!-- 第三部分：主内容区（只保留默认内容） -->
       <el-main class="main-content" >
         <router-view v-slot="{ Component }">
           <transition name="fade" mode="out-in">
             <keep-alive>
-              <component :is="Component" :friend-list="friendList" />
+              <component :is="Component" :friend-list="friendList" :group-list="groupList"  />
             </keep-alive>
           </transition>
         </router-view>
@@ -211,6 +243,17 @@
             <el-icon><FullScreen /></el-icon>
           </button>
         </div>
+
+        <!-- 日历签到按钮，放在详情按钮左边，适配日夜模式 -->
+        <el-button
+          circle
+          class="calendar-btn"
+          @click="handleShowSignInCalendar"
+          data-tooltip="每日签到"
+          :style="calendarBtnStyle"
+        >
+          <el-icon><Calendar style="color: #fff;" /></el-icon>
+        </el-button>
       </div>
     </el-container>
 
@@ -288,29 +331,68 @@
         </el-form>
       </div>
     </FullScreenDialog>
+
+    <!-- 添加消息通知组件 -->
+    <message-notification
+      ref="messageNotificationRef"
+      :message="notificationMessage"
+      @click="handleNotificationClick"
+    />
+    <FullScreenDialog v-model:visible="showSignInCalendar" title="每日签到">
+      <div class="signin-calendar-topbar">
+       
+      </div>
+      <div class="sign-calendar-wrapper">
+      <SignInCalendar
+        v-model="showSignInCalendar"
+        :signed-dates="signedDates"
+          :is-today-signed-in="isTodaySignedIn"
+          :consecutive-days="consecutiveDays"
+          :total-days="totalDays"
+          @sign="handleSignInClick"
+      />
+      </div>
+      <template #footer>
+        <el-button @click="showSignInCalendar = false" class="sign-close-btn">关闭</el-button>
+      </template>
+    </FullScreenDialog>
+    
+    <!-- ExpDialog经验值弹窗 -->
+    <ExpDialog 
+      v-model:visible="showExpDialog" 
+      :title="expDialogTitle"
+      @close="showExpDialog = false"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
+import { ref, onMounted, onUnmounted, watch, computed, h, defineComponent } from 'vue';
 import { 
   ChatDotRound, Setting, Sunny, Moon, 
   ArrowLeft, Plus, User, UserFilled, Message,
-  Close, Minus, FullScreen, Search, Position
+  Close, Minus, FullScreen, Search, Position,
+  Calendar, Folder
 } from '@element-plus/icons-vue';
 import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import SearchDialog from '@/components/SearchDialog.vue';
-import { searchFriends, getFriendList } from '@/api/friend';
-import { getContactList } from '@/api/contact';
+import {  getFriendList } from '@/api/friend';
+import { getContactList, getGroupList } from '@/api/contact';
 import '@/assets/styles/home.css';
 import { logoutService } from '@/api/user';
 import { useUserInfoStore } from '@/stores/user';
-import { formatDate, formatMessageTime } from '@/utils/time';
+import { formatMessageTime } from '@/utils/time';
 import { useContactStore } from '@/stores/contact';
 import { getMessageById } from '@/api/chatService';
 import emitter from '@/utils/eventBus';
+import MessageNotification from '@/components/MessageNotification.vue';
+import SignInCalendar from '@/components/SignInCalendar.vue';
+import ExpDialog from '@/components/ExpDialog.vue';
+import { ElInfiniteScroll } from 'element-plus';
+import { addGroupRoom } from '@/api/room';
+import { handleSignIn, getSignInDetail, getSignedDates, checkTodaySignIn, getConsecutiveSignInDays, getTotalSignInDays } from '@/utils/signInHandler';
 
 const userInfoStore = useUserInfoStore()
 const contactStore = useContactStore();
@@ -332,6 +414,16 @@ const MENU_CONFIG = {
     icon: 'user',
     path: '/UserHub',
     label: '设置'
+  },
+  aichat: {
+    icon: 'aichat',
+    path: '/aichat',
+    label: 'AI Chat'
+  },
+  archives: {
+    icon: 'archives',
+    path: '/archives',
+    label: '档案馆'
   }
 };
 
@@ -345,6 +437,12 @@ const router = useRouter();
 const route = useRoute();
 const isDarkMode = ref(true);
 const isSidebarCollapse = ref(false);
+
+// 监听侧边栏状态变化
+watch(isSidebarCollapse, (newVal) => {
+  // 发出侧边栏状态变化事件
+  emitter.emit('sidebar-toggle', newVal);
+});
 const searchQuery = ref('');
 const currentView = ref('friends');
 
@@ -381,6 +479,7 @@ watch(() => route.path, () => {
 // 添加加载状态
 const isLoading = ref(false);
 const isFriendListLoaded = ref(false);
+const noMoreData = ref(false);
 
 // 获取好友列表
 const fetchFriendList = async () => {
@@ -407,20 +506,68 @@ const fetchFriendList = async () => {
   }
 };
 
-// 获取联系人列表
-const fetchContactList = async () => {
-  console.log('=== fetchContactList 被调用 ===');
+// 无限滚动加载更多
+const loadMore = async () => {
+  if (isLoading.value || noMoreData.value) return;
+  isLoading.value = true;
+  contactQuery.value.page++;
   try {
-    // 确保好友列表已加载
+    const res = await getContactList(contactQuery.value);
+    if (res.code === 200) {
+      const contacts = res.data.records.map(contact => {
+        const friendInfo = friendMap.value.get(contact.friendId) || {};
+        return {
+          id: contact.friendId,     // id 应该是好友的ID
+          roomId: contact.roomId,   // roomId 用于聊天室标识
+          friendId: contact.friendId,
+          activeTime: contact.activeTime,
+          lastMsgId: contact.lastMsgId,
+          readTime: contact.readTime,
+          username: friendInfo.username || '未知用户',
+          avatar: friendInfo.avatar || '',
+          status: friendInfo.status || false,
+          createTime: friendInfo.createTime,
+          exep: friendInfo.exep,
+        };
+      });
+      if (contacts.length === 0) {
+        noMoreData.value = true;
+      } else {
+        contactList.value = contactList.value.concat(contacts);
+        // 获取每个新联系人的最新消息
+        for (const contact of contacts) {
+          if (contact.lastMsgId) {
+            await getLatestMessage(contact);
+          }
+        }
+        // 如果返回数量小于pageSize，说明没有更多了
+        if (contacts.length < contactQuery.value.pageSize) {
+          noMoreData.value = true;
+        }
+      }
+    } else {
+      ElMessage.error(res.msg || '获取会话列表失败');
+      noMoreData.value = true;
+    }
+  } catch (error) {
+    ElMessage.error('获取会话列表失败，请稍后重试');
+    noMoreData.value = true;
+  } finally {
+    isLoading.value = false;
+  }
+};
+
+// 初始加载第一页
+const fetchContactList = async () => {
+  contactQuery.value.page = 1;
+  noMoreData.value = false;
+  isLoading.value = true;
+  try {
     if (!isFriendListLoaded.value) {
       await fetchFriendList();
     }
-
     const res = await getContactList(contactQuery.value);
-    console.log('getContactList 返回结果:', res);
-    
     if (res.code === 200) {
-      // 使用映射获取好友信息
       const contacts = res.data.records.map(contact => {
         const friendInfo = friendMap.value.get(contact.friendId) || {};
         return {
@@ -434,27 +581,31 @@ const fetchContactList = async () => {
           avatar: friendInfo.avatar || '',
           status: friendInfo.status || false,
           createTime: friendInfo.createTime,
-          exep: friendInfo.exep
+          exep: friendInfo.exep,
         };
       });
-      
-      console.log('更新联系人列表:', contacts);
       contactList.value = contacts;
-      // 将联系人信息存储到 contact store
-      contactStore.setContacts(contacts);
-      
-      // 获取每个联系人的最新消息
       for (const contact of contacts) {
         if (contact.lastMsgId) {
           await getLatestMessage(contact);
         }
       }
+      // 如果第一页数量小于pageSize，说明没有更多
+      noMoreData.value = contacts.length < contactQuery.value.pageSize;
+      return contacts;
     } else {
       ElMessage.error(res.msg || '获取会话列表失败');
+      contactList.value = [];
+      noMoreData.value = true;
+      return [];
     }
   } catch (error) {
-    console.error('获取会话列表错误:', error);
     ElMessage.error('获取会话列表失败，请稍后重试');
+    contactList.value = [];
+    noMoreData.value = true;
+    return [];
+  } finally {
+    isLoading.value = false;
   }
 };
 
@@ -482,16 +633,53 @@ const getLatestMessage = async (contact) => {
   try {
     const res = await getMessageById(contact.lastMsgId);
     if (res.code === 200) {
-      messagePreviews.value.set(contact.friendId, res.data.content);
+      messagePreviews.value.set(contact.id, res.data.content);
     }
   } catch (error) {
     console.error('获取最新消息失败:', error);
   }
 };
 
+// 获取群聊会话列表
+const fetchGroupListRaw = async () => {
+  try {
+    const res = await getGroupList(groupQuery.value);
+    if (res.code === 200) {
+      const groups = res.data.records.map(group => ({
+        id: group.roomId,
+        roomId: group.roomId,
+        name: group.name,
+        avatar: group.avatar,
+        activeTime: group.activeTime,
+        lastMsgId: group.lastMsgId,
+      }));
+      groupList.value = groups;
+      // 不再单独setContact，合并到统一管理
+      return groups;
+    } else {
+      ElMessage.error(res.msg || '获取群聊会话列表失败');
+      return [];
+    }
+  } catch (error) {
+    ElMessage.error('获取群聊会话列表失败，请稍后重试');
+    return [];
+  }
+};
+
+// 统一管理所有会话
+const fetchAllConversations = async () => {
+  const [contacts, groups] = await Promise.all([
+    fetchContactList(),
+    fetchGroupListRaw()
+  ]);
+  // 分别存入私聊和群聊
+  contactStore.setContacts(contacts);
+  contactStore.setGroupChats(groups);
+};
+
 onMounted(() => {
-  console.log('Home 组件挂载，注册事件监听器');
-  fetchContactList();
+
+  fetchAllConversations();
   if (isDarkMode.value) {
     document.body.classList.add('dark-theme');
   }
@@ -500,22 +688,37 @@ onMounted(() => {
   setActiveIconFromRoute();
   
   window.addEventListener('update-active-menu', handleMenuUpdate);
-  // 监听刷新联系人列表事件
+  // 监听刷新会话列表事件
   emitter.on('refresh-contact-list', () => {
     console.log('收到 refresh-contact-list 事件');
-    fetchContactList();
+    fetchAllConversations();
   });
   // 监听刷新好友列表事件
   emitter.on('refresh-friend-list', () => {
     console.log('收到 refresh-friend-list 事件');
     fetchFriendList();
   });
+
+  console.log('Home 组件挂载，检查消息通知组件:', messageNotificationRef.value);
+  
+  // 监听好友申请消息事件
+  emitter.on('friend-apply', (data) => {
+    console.log('Home 组件收到好友申请消息:', data);
+    if (data && data.fromUid) {
+      notificationMessage.value = '有人向你发起了好友申请';
+      if (messageNotificationRef.value) {
+        messageNotificationRef.value.show();
+      }
+    }
+  });
 });
 
 onUnmounted(() => {
-  window.removeEventListener('update-active-menu', handleMenuUpdate);
-  emitter.off('refresh-contact-list', fetchContactList);
+  console.log('Home 组件卸载，移除事件监听');
+  emitter.off('friend-apply');
+  emitter.off('refresh-contact-list', fetchAllConversations);
   emitter.off('refresh-friend-list', fetchFriendList);
+  window.removeEventListener('update-active-menu', handleMenuUpdate);
 });
 
 const toggleTheme = () => {
@@ -526,8 +729,6 @@ const toggleTheme = () => {
     document.body.classList.remove('dark-theme');
   }
 };
-
-
 
 const handleMenuClick = (menu) => {
   if (menu.handler) {
@@ -601,11 +802,36 @@ const handleMaximize = () => {
 };
 
 // 添加图标组件映射函数
+const AnthropicIcon = defineComponent({
+  name: 'AnthropicIcon',
+  render() {
+    return h(
+      'svg',
+      {
+        fill: '#00000',
+        fillRule: 'evenodd',
+        style: 'flex:none;line-height:1',
+        viewBox: '0 0 24 24',
+        width: '1em',
+        xmlns: 'http://www.w3.org/2000/svg'
+      },
+      [
+        h('title', null, 'Anthropic'),
+        h('path', {
+          d: 'M13.827 3.52h3.603L24 20h-3.603l-6.57-16.48zm-7.258 0h3.767L16.906 20h-3.674l-1.343-3.461H5.017l-1.344 3.46H0L6.57 3.522zm4.132 9.959L8.453 7.687 6.205 13.48H10.7z'
+        })
+      ]
+    );
+  }
+});
+
 const getIconComponent = (icon) => {
   const iconMap = {
     chat: ChatDotRound,
     mail: Message,
-    user: Setting
+    user: Setting,
+    aichat: AnthropicIcon,
+    archives: Folder
   };
   return iconMap[icon] || ChatDotRound;
 };
@@ -626,11 +852,25 @@ const handleShowCreateGroupDialog = () => {
 // 处理创建群聊
 const handleCreateGroup = async () => {
   try {
-    // TODO: 调用创建群聊接口
-    ElMessage.success('群聊创建成功');
-    showCreateGroupDialog.value = false;
+    const payload = {
+      name: groupForm.value.name,
+      avatar: groupForm.value.avatar,
+      groupDesc: groupForm.value.announcement
+    };
+    const res = await addGroupRoom(payload);
+    if (res.code === 200) {
+      ElMessage.success('群聊创建成功');
+      showCreateGroupDialog.value = false;
+      handleResetForm();
+      // 刷新群聊列表
+      groupQuery.value.page = 1;
+      noMoreGroups.value = false;
+      await fetchGroupListRaw();
+    } else {
+      ElMessage.error(res.msg || '创建群聊失败');
+    }
   } catch (error) {
-    ElMessage.error('创建失败');
+    ElMessage.error('创建失败，请稍后重试');
   }
 };
 
@@ -649,37 +889,149 @@ const handleResetForm = () => {
   };
 };
 
-const beforeEnter = (el) => {
-  el.style.opacity = '0'
-  el.style.transform = 'translateX(100%)'
-}
-
-const enter = (el, done) => {
-  requestAnimationFrame(() => {
-    el.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-    el.style.opacity = '1'
-    el.style.transform = 'translateX(0)'
-    el.addEventListener('transitionend', done, { once: true })
-  })
-}
-
-const leave = (el, done) => {
-  requestAnimationFrame(() => {
-    el.style.transition = 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)'
-    el.style.opacity = '0'
-    el.style.transform = 'translateX(-100%)'
-    el.addEventListener('transitionend', done, { once: true })
-  })
-}
-
-// 添加处理聊天点击事件
+// 修改处理聊天点击事件
 const handleChat = (contact) => {
-  // 如果当前已经在聊天页面，且ID相同，则不进行跳转
-  if (route.path === '/chat' && route.params.id === contact.friendId.toString()) {
+  // 如果当前已经在聊天页面，且用户ID相同，则不进行跳转
+  if (route.path === '/chat' && route.params.id === contact.id.toString()) {
     return;
   }
-  router.push(`/chat/${contact.friendId}`);
+  // 设置当前聊天对象
+  contactStore.setCurrentChat(contact.id);
+  router.push(`/chat/${contact.id}`);
 };
+
+// 添加消息通知相关的响应式变量
+const messageNotificationRef = ref(null);
+const notificationMessage = ref('');
+
+// 处理通知点击
+const handleNotificationClick = () => {
+  router.push('/mail');
+};
+
+const showSignInCalendar = ref(false);
+const signedDates = ref([]);
+const isTodaySignedIn = ref(false);
+const consecutiveDays = ref(0);
+const totalDays = ref(0);
+
+// ExpDialog控制
+const showExpDialog = ref(false);
+const expDialogTitle = ref('获得100EX !');
+
+const initSignInData = async () => {
+  const detail = await getSignInDetail();
+  signedDates.value = getSignedDates(detail);
+  isTodaySignedIn.value = checkTodaySignIn(detail);
+  consecutiveDays.value = getConsecutiveSignInDays(detail);
+  totalDays.value = getTotalSignInDays(detail);
+};
+
+const handleShowSignInCalendar = async () => {
+  await initSignInData();
+  showSignInCalendar.value = true;
+};
+
+const handleSignInClick = async (date) => {
+  const today = new Date();
+  if (
+    date.getFullYear() !== today.getFullYear() ||
+    date.getMonth() !== today.getMonth() ||
+    date.getDate() !== today.getDate()
+  ) return;
+  if (isTodaySignedIn.value) return;
+  const success = await handleSignIn();
+  if (success) {
+    await initSignInData();
+    // 显示经验值弹窗
+    showExpDialog.value = true;
+    setTimeout(() => {
+      showExpDialog.value = false;
+    }, 2000);
+  }
+};
+
+const calendarBtnStyle = computed(() => ({
+  background: isDarkMode.value ? '#2253a7' : '#409EFF',
+  border: 'none',
+  boxShadow: isDarkMode.value
+    ? '0 2px 8px rgba(34,83,167,0.18)'
+    : '0 2px 8px rgba(64, 158, 255, 0.18)',
+  transition: 'background 0.3s',
+}));
+
+
+// 添加处理群聊点击事件
+const handleGroupChat = (group) => {
+  // 如果当前已经在该群聊页面，则不进行跳转
+  if (route.path === '/groupchat' && route.params.id === group.roomId?.toString()) {
+    return;
+  }
+  router.push(`/groupchat/${group.roomId}`);
+};
+
+const groupQuery = ref({
+  page: 1,
+  pageSize: 10 
+});
+const isLoadingGroups = ref(false);
+const noMoreGroups = ref(false);
+
+// 无限滚动加载更多群聊
+const loadMoreGroups = async () => {
+  if (isLoadingGroups.value || noMoreGroups.value) return;
+  isLoadingGroups.value = true;
+  groupQuery.value.page++;
+  try {
+    const res = await getGroupList(groupQuery.value);
+    if (res.code === 200) {
+      const groups = res.data.records.map(group => ({
+        id: group.roomId,
+        roomId: group.roomId,
+        name: group.name,
+        avatar: group.avatar,
+        activeTime: group.activeTime,
+        lastMsgId: group.lastMsgId,
+      }));
+      if (groups.length === 0) {
+        noMoreGroups.value = true;
+      } else {
+        groupList.value = groupList.value.concat(groups);
+        if (groups.length < groupQuery.value.pageSize) {
+          noMoreGroups.value = true;
+        }
+      }
+    } else {
+      ElMessage.error(res.msg || '获取群聊会话列表失败');
+      noMoreGroups.value = true;
+    }
+  } catch (error) {
+    ElMessage.error('获取群聊会话列表失败，请稍后重试');
+    noMoreGroups.value = true;
+  } finally {
+    isLoadingGroups.value = false;
+  }
+};
+
+// 添加计算属性用于过滤联系人和群组
+const filteredContacts = computed(() => {
+  if (!searchQuery.value) return contactList.value;
+  const query = searchQuery.value.toLowerCase();
+  return contactList.value.filter(contact => 
+    contact.username.toLowerCase().includes(query) ||
+    String(contact.friendId).includes(query)
+  );
+});
+
+const filteredGroups = computed(() => {
+  if (!searchQuery.value) return groupList.value;
+  const query = searchQuery.value.toLowerCase();
+  return groupList.value.filter(group => 
+    group.name.toLowerCase().includes(query) ||
+    String(group.roomId).includes(query)
+  );
+});
+
 </script>
 
 
@@ -695,92 +1047,11 @@ const handleChat = (contact) => {
   opacity: 0;
 }
 
-/* 确保过渡期间内容不会闪烁 */
-.container {
-  position: relative;
-  min-height: calc(100vh - 64px);
-}
-
 /* 优化动画性能 */
 * {
   backface-visibility: hidden;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-}
-
-/* 添加新的样式 */
-.search-content {
-  padding: 20px;
-}
-
-.search-tabs {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--el-border-color-light);
-  padding-bottom: 12px;
-}
-
-.tab-item {
-  font-size: 16px;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.tab-item:hover {
-  color: var(--el-color-primary);
-}
-
-.tab-item.active {
-  color: var(--el-color-primary);
-  font-weight: 600;
-}
-
-.search-input-container {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 20px;
-}
-
-.search-input {
-  flex: 1;
-}
-
-.search-button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 20px;
-  height: 40px;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-}
-
-.search-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.2);
-}
-
-.search-button:active {
-  transform: translateY(0);
-}
-
-.search-button .el-icon {
-  font-size: 16px;
-}
-
-/* 暗色模式适配 */
-.dark-mode .search-button {
-  background: var(--el-color-primary);
-  border-color: var(--el-color-primary);
-}
-
-.dark-mode .search-button:hover {
-  background: var(--el-color-primary-light-3);
-  border-color: var(--el-color-primary-light-3);
 }
 
 .result-item {
@@ -831,10 +1102,6 @@ const handleChat = (contact) => {
 
 .dark-mode .result-item:hover {
   background: rgba(255, 255, 255, 0.15);
-}
-
-.dark-mode .search-tabs {
-  border-bottom-color: var(--el-border-color-darker);
 }
 
 .create-group-content {
@@ -1252,6 +1519,248 @@ const handleChat = (contact) => {
   font-size: 13px;
   transition: all 0.3s ease;
 }
+
+.calendar-btn {
+  margin-right: 8px;
+  transition: background 0.3s;
+}
+.calendar-btn:hover {
+  filter: brightness(1.1);
+}
+.sign-dialog {
+  border-radius: 18px;
+  overflow: hidden;
+  background: #fff;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+}
+.sign-dialog .el-dialog__body {
+  padding: 0 24px 24px 24px;
+}
+.sign-calendar-wrapper {
+  padding: 12px 0 0 0;
+}
+.sign-calendar-header {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  font-weight: bold;
+  color: #409EFF;
+  margin-bottom: 8px;
+}
+.sign-calendar-title {
+  letter-spacing: 2px;
+}
+.sign-cell {
+  width: 38px;
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+  border-radius: 50%;
+  font-size: 15px;
+  font-weight: 600;
+  transition: background 0.2s, color 0.2s;
+  cursor: pointer;
+  user-select: none;
+}
+:deep(.el-calendar__header) {
+  display: none !important;
+}
+:deep(.el-calendar-table .signed-cell) {
+  background: #67C23A !important;
+  color: #fff !important;
+}
+:deep(.el-calendar-table .unsigned-cell) {
+  background: #B71A1A !important;
+  color: #fff !important;
+}
+:deep(.el-calendar-table .today-cell) {
+  background: #409EFF !important;
+  color: #fff !important;
+}
+.dark-mode :deep(.el-calendar-table .future-cell) {
+  background: #23272e !important;
+  color: #555 !important;
+}
+.sign-close-btn {
+  border-radius: 8px;
+  min-width: 80px;
+  font-size: 15px;
+}
+.dark-mode .sign-dialog {
+  background: #23272e;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.38);
+}
+.dark-mode .sign-calendar-header {
+  color: #90caf9;
+}
+
+
+.scroll-wrapper::-webkit-scrollbar {
+  display: none; /* Chrome/Safari */
+}
+
+.sidebar-toggle-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  margin: 12px auto;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar-toggle-btn:hover {
+  transform: scale(1.05);
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.sidebar-toggle-btn.collapsed {
+  background: rgba(46, 125, 50, 0.1);
+  border-color: rgba(46, 125, 50, 0.3);
+}
+
+.sidebar-toggle-btn.collapsed:hover {
+  background: rgba(46, 125, 50, 0.15);
+  box-shadow: 0 4px 12px rgba(46, 125, 50, 0.2);
+}
+
+/* 暗色模式适配 */
+.dark-mode .sidebar-toggle-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.dark-mode .sidebar-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.dark-mode .sidebar-toggle-btn.collapsed {
+  background: rgba(46, 125, 50, 0.08);
+  border-color: rgba(46, 125, 50, 0.2);
+}
+
+.dark-mode .sidebar-toggle-btn.collapsed:hover {
+  background: rgba(46, 125, 50, 0.12);
+}
+
+:deep(.el-calendar) {
+  background: transparent !important;
+  border: none !important;
+}
+:deep(.el-calendar-table) {
+  background: transparent !important;
+  border: none !important;
+}
+:deep(.el-calendar-table td) {
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  height: 54px !important;
+  transition: background 0.2s;
+}
+:deep(.el-calendar-table .sign-cell-text) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 0 auto;
+  font-size: 17px;
+  font-weight: 700;
+  border-radius: 50%;
+  box-shadow: none;
+  background: none;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s, color 0.2s;
+  cursor: pointer;
+  user-select: none;
+}
+:deep(.el-calendar-table .sign-cell-text:hover) {
+  box-shadow: 0 4px 16px 0 rgba(64,158,255,0.10);
+  transform: translateY(-2px) scale(1.08);
+}
+:deep(.el-calendar-table .signed-cell.sign-cell-text) {
+  background: #1AAD19 !important;
+  color: #fff !important;
+}
+:deep(.el-calendar-table .unsigned-cell.sign-cell-text) {
+  background: #B71A1A !important;
+  color: #fff !important;
+}
+:deep(.el-calendar-table .today-cell.sign-cell-text) {
+  background: #409EFF !important;
+  color: #fff !important;
+}
+.dark-mode :deep(.el-calendar-table .sign-cell-text) {
+  color: #eee;
+  background: none;
+}
+.dark-mode :deep(.el-calendar-table .signed-cell.sign-cell-text) {
+  background: #1AAD19 !important;
+  color: #fff !important;
+}
+.dark-mode :deep(.el-calendar-table .unsigned-cell.sign-cell-text) {
+  background: #B71A1A !important;
+  color: #fff !important;
+}
+.dark-mode :deep(.el-calendar-table .today-cell.sign-cell-text) {
+  background: #409EFF !important;
+  color: #fff !important;
+}
+.dark-mode :deep(.el-calendar-table .sign-cell-text[disabled]),
+.dark-mode :deep(.el-calendar-table .sign-cell-text.disabled) {
+  background: #23272e !important;
+  color: #555 !important;
+}
+.dark-mode :deep(.el-calendar-table .prev-month .sign-cell-text),
+.dark-mode :deep(.el-calendar-table .next-month .sign-cell-text) {
+  background: none !important;
+  color: #444 !important;
+  font-weight: 400;
+}
+
+.signin-calendar-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 32px 12px 32px;
+  gap: 24px;
+}
+.calendar-ym {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 1px;
+  color: #222;
+}
+.calendar-stats {
+  display: flex;
+  gap: 16px;
+  align-items: center;
+}
+.stat-item {
+  font-size: 0.98rem;
+}
+.stat-item b {
+  font-size: 1.08rem;
+}
+.dark-mode .calendar-ym {
+  color: #fff;
+}
+.dark-mode .calendar-stats .stat-item {
+  color: #aaa;
+}
+
 </style>
 
 

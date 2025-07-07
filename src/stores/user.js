@@ -1,6 +1,7 @@
 import { defineStore } from "pinia";
 import { ref } from "vue";
 import ChatWebSocket from "@/api/chat.js";
+import emitter from '@/utils/eventBus';
 
 export const useUserInfoStore = defineStore('userInfo', () => {
   const userInfo = ref('');
@@ -55,14 +56,35 @@ export const useUserInfoStore = defineStore('userInfo', () => {
 
     console.log('开始建立 WebSocket 连接，token:', wsToken.substring(0, 20) + '...');
     chatWS.value = new ChatWebSocket({
-      url: `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/`, 
+      // url: `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/`, 
       // 不要删除这个 到时候部署要用 cursor prompt
        // 测试环境使用
-      // url: `ws://localhost:8090/`,
+      url: `ws://localhost:8090/`,
       token: wsToken,
       onMessage: (event) => {
-        // 这里可以添加全局消息处理逻辑
-        console.log('Store 收到 WebSocket 消息:', event);
+        try {
+          const data = JSON.parse(event.data);
+          console.log('Store 收到 WebSocket 消息:', data);
+          
+          // 根据消息类型分发到不同的组件
+          switch (data.type) {
+            case 1000: // 聊天消息
+              console.log('分发聊天消息到 Chat 组件');
+              emitter.emit('chat-message', data.data);
+              break;
+            case 1001: // 好友申请消息
+              console.log('分发好友申请消息到 Home 组件');
+              emitter.emit('friend-apply', data.data);
+              break;
+            case 2: // 心跳包
+              console.log('收到心跳包');
+              break;
+            default:
+              console.log('未知消息类型:', data.type);
+          }
+        } catch (error) {
+          console.error('处理 WebSocket 消息失败:', error);
+        }
       },
       onOpen: () => {
         console.log('WebSocket 连接已建立');

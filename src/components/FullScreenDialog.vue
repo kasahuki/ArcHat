@@ -30,7 +30,7 @@
 
 <script setup>
 import { Close, FullScreen } from '@element-plus/icons-vue'
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
 const props = defineProps({
   visible: {
@@ -64,6 +64,16 @@ const handleOverlayClick = () => {
     handleClose()
   }
 }
+
+// 新增：每次弹窗打开时重置为非全屏
+watch(
+  () => props.visible,
+  (val) => {
+    if (val) {
+      isMaximized.value = false
+    }
+  }
+)
 </script>
 
 <style scoped>
@@ -326,5 +336,36 @@ const handleOverlayClick = () => {
 
 :deep(.dark-mode) .dialog-content::-webkit-scrollbar-thumb:hover {
   background-color: rgba(255, 255, 255, 0.3);
+}
+
+.sign-calendar-root {
+  width: 100%;
+  max-width: 360px;
+  background: rgba(255,255,255,0.85);
+  border-radius: 18px;
+  box-shadow: 0 4px 24px 0 rgba(31, 38, 135, 0.10);
+  margin: 0 auto;
+  padding: 24px 0 32px 0; /* 底部多留点空间给按钮 */
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+}
+.sign-actions {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-top: 24px;
+  margin-bottom: 0;
+}
+
+/* 伪代码，实际类名请根据你的弹窗实现调整 */
+.search-dialog-content, .fullscreen-dialog-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 0;
+  background: transparent;
 }
 </style> 

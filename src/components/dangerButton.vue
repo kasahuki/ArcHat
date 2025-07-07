@@ -13,7 +13,7 @@ defineProps({
   type: {
     type: String,
     default: 'danger',
-    validator: (value) => ['danger', 'primary', 'text'].includes(value)
+    validator: (value) => ['danger', 'primary', 'text', 'success', 'warning'].includes(value)
   }
 });
 </script>
@@ -117,6 +117,36 @@ defineProps({
   background: transparent;
   color: hsl(210deg 100% 47%);
   box-shadow: none;
+}
+
+/* 成功按钮样式 */
+.custom-button--success .edge {
+  background: linear-gradient(
+    to left,
+    hsl(140deg 70% 16%) 0%,
+    hsl(140deg 70% 32%) 8%,
+    hsl(140deg 70% 32%) 92%,
+    hsl(140deg 70% 16%) 100%
+  );
+}
+
+.custom-button--success .front {
+  background: hsl(140deg 70% 47%);
+}
+
+/* 警告按钮样式 */
+.custom-button--warning .edge {
+  background: linear-gradient(
+    to left,
+    hsl(35deg 100% 16%) 0%,
+    hsl(35deg 100% 32%) 8%,
+    hsl(35deg 100% 32%) 92%,
+    hsl(35deg 100% 16%) 100%
+  );
+}
+
+.custom-button--warning .front {
+  background: hsl(35deg 100% 47%);
 }
 
 .custom-button:hover {

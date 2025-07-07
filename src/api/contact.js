@@ -4,4 +4,8 @@ export const getContactList = (params)=>{
   return request.post('/contact/listPrivate',params)
 }
 
+// 获取群聊会话列表
+export const getGroupList = (params) => {
+  return request.post('/contact/listGroup', params)
+}
 

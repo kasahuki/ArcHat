@@ -13,8 +13,12 @@
         </div>
         <div class="content-box-body">
           <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
-            <div class="avatar-container">
+            <div class="avatar-container" style="position:relative;">
+              <div class="avatar-upload-icon" @click="showAvatarUploadDialog = true">
+                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Flowbite Icons by Themesberg - https://github.com/themesberg/flowbite-icons/blob/main/LICENSE --><path fill="currentColor" fill-rule="evenodd" d="M12 3a1 1 0 0 1 .78.375l4 5a1 1 0 1 1-1.56 1.25L13 6.85V14a1 1 0 1 1-2 0V6.85L8.78 9.626a1 1 0 1 1-1.56-1.25l4-5A1 1 0 0 1 12 3M9 14v-1H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-4v1a3 3 0 1 1-6 0m8 2a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2z" clip-rule="evenodd"/></svg>
+              </div>
               <el-avatar :size="120" :src="userInfo.avatar" />
+             
             </div>
             <div class="profile-info flex-1">
               <div class="name-level">
@@ -37,12 +41,12 @@
                     <el-input
                       v-model="editingUsername"
                       placeholder="请输入新用户名"
-                      class="popover-input"
+                      style="height: 45px !important;"
                       @keyup.enter="saveUsername"
                     >
                       <template #append>
-                        <el-button @click="saveUsername">
-                          <el-icon><Check /></el-icon>
+                        <el-button @click="saveUsername" style="display: flex;align-items: center;justify-content: center;">
+                          <svg xmlns="http://www.w3.org/2000/svg"  width="30"  viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="green" d="m10.6 13.8l-2.15-2.15q-.275-.275-.7-.275t-.7.275t-.275.7t.275.7L9.9 15.9q.3.3.7.3t.7-.3l5.65-5.65q.275-.275.275-.7t-.275-.7t-.7-.275t-.7.275zM12 22q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22"/></svg>
                         </el-button>
                       </template>
                     </el-input>
@@ -53,8 +57,8 @@
                 </div>
                
                 <DangerButton type="danger" @click="handleLogout" class="logout-btn">
-                  <el-icon><SwitchButton /></el-icon>
-                  退出登录
+           
+                  <span style=" display: flex;  gap: 5px;padding: 2px" > <svg xmlns="http://www.w3.org/2000/svg" width="22"  viewBox="0 0 16 16"><!-- Icon from IcoMoon Free by Keyamoon - https://www.gnu.org/licenses/gpl.html --><path fill="currentColor" d="M6 8H1V6h5V4l3 3l-3 3zm10-8v13l-6 3v-3H4V9h1v3h5V3l4-2H5v4H4V0z"/></svg>退出登录</span>
                 </DangerButton>
               </div>
               <div class="exp-bar">
@@ -128,10 +132,17 @@
           <div class="social-part">
             <div class="part-header">
               <h3 class="part-title">我的群聊</h3>
-              <DangerButton type="primary" @click="handleShowSearchDialog('group')">
-                <el-icon><Plus /></el-icon>
-                添加群聊
-              </DangerButton>
+              <el-space wrap :size="20">
+                <DangerButton type="primary" @click="showManageGroupsDialog = true">
+                  <el-icon><Setting /></el-icon>
+                  管理群聊
+                </DangerButton>
+                <DangerButton type="primary" @click="handleShowSearchDialog('group')">
+                  <el-icon><Plus /></el-icon>
+                  添加群聊
+                </DangerButton>
+               
+              </el-space>
             </div>
             <div class="groups-grid" v-if="groups.length > 0">
               <div v-for="group in groups" :key="group.id" class="group-card" @click="handleGroupClick(group, $event)">
@@ -140,7 +151,9 @@
                 </div>
                 <div class="group-info">
                   <h4 class="group-name">{{ group.name }}</h4>
-                  <p class="group-members">{{ group.memberCount }} 位成员</p>
+                </div>
+                <div class="group-more-btn" @click.stop="handleGroupMoreClick(group, $event)">
+                  <el-icon><MoreFilled /></el-icon>
                 </div>
               </div>
             </div>
@@ -182,14 +195,11 @@
         </div>
       </div>
 
+      <!-- 第四部分：数据统计 -->
+      <UserDataVisualization :user-id="userInfo.username" />
+
       <!-- 好友管理弹窗 -->
-      <el-dialog
-        v-model="showFriendsDialog"
-        title="好友管理"
-        width="50%"
-        :close-on-click-modal="false"
-        class="friends-dialog"
-      >
+      <FullScreenDialog v-model:visible="showFriendsDialog" title="好友管理">
         <div class="friends-dialog-content">
           <div class="search-section">
             <el-input
@@ -233,7 +243,7 @@
             </div>
           </div>
         </div>
-      </el-dialog>
+      </FullScreenDialog>
 
       <!-- 用户详情弹窗 -->
       <user-detail-popup
@@ -244,11 +254,12 @@
         @start-chat="handleStartChat"
       />
 
-      <!-- 群聊详情弹窗 -->
+      <!-- 群聊简要信息弹窗 -->
       <group-detail-popup
         v-model:visible="showGroupDetail"
         :group="selectedGroup"
         :position="groupDetailPosition"
+        @group-more="handleGroupMoreClick"
       />
 
       <!-- 在模板中替换原有的搜索弹窗 -->
@@ -257,40 +268,119 @@
         :initial-type="searchType"
       />
 
-      <FullScreenDialog
-        v-model:visible="showCreateGroupDialog"
-        title="创建群聊"
-      >
-        <div class="create-group-content">
-          <el-form :model="groupForm" label-width="80px">
-            <el-form-item label="群名称">
-              <el-input v-model="groupForm.name" placeholder="请输入群名称" />
-            </el-form-item>
-            <el-form-item label="群头像">
-              <el-upload
-                class="avatar-uploader"
-                action="#"
-                :show-file-list="false"
-                :before-upload="beforeAvatarUpload"
-              >
-                <img v-if="groupForm.avatar" :src="groupForm.avatar" class="avatar" />
-                <el-icon v-else class="avatar-uploader-icon"><Plus /></el-icon>
-              </el-upload>
-            </el-form-item>
-            <el-form-item label="群公告">
-              <el-input
-                v-model="groupForm.announcement"
-                type="textarea"
-                rows="3"
-                placeholder="请输入群公告"
+
+
+      <!-- 管理群聊全屏弹窗 -->
+      <FullScreenDialog v-model:visible="showManageGroupsDialog" title="管理群聊">
+        <el-tabs v-model="manageGroupsTab" class="manage-groups-tabs">
+          <el-tab-pane name="groups">
+            <template #label>
+              <span class="custom-tab-icon"><component :is="ManageIcon" /></span>
+            </template>
+            <div class="manage-groups-content">
+              <div class="manage-groups-grid">
+                <div v-for="group in pagedGroups" :key="group.id" class="manage-group-card" @click="handleManageGroupCardClick(group, $event)">
+                  <el-avatar :size="60" :src="group.avatar" />
+                  <div class="manage-group-info">
+                    <h4 class="group-name">{{ group.name }}</h4>
+                  </div>
+                </div>
+              </div>
+              <div class="pagination-container">
+                <el-pagination
+                  v-model:current-page="groupsPage"
+                  v-model:page-size="groupsPageSize"
+                  :page-sizes="[5, 10, 20, 50]"
+                  :total="groups.length"
+                  layout="total, sizes, prev, pager, next"
+                  @size-change="val => { groupsPageSize = val; groupsPage = 1; }"
+                  @current-change="val => groupsPage = val"
+                />
+              </div>
+              <!-- 管理群聊弹窗专用的群聊简要信息弹窗 -->
+              <group-detail-popup
+                v-if="showManageGroupDetailPopup"
+                v-model:visible="showManageGroupDetailPopup"
+                :group="selectedManageGroup"
+                :position="manageGroupDetailPosition"
+                :hide-start-group="true"
+                @group-more="handleManageGroupMoreClick"
               />
-            </el-form-item>
-            <el-form-item>
-              <el-button type="primary" @click="handleCreateGroup">创建群聊</el-button>
-            </el-form-item>
-          </el-form>
+            </div>
+          </el-tab-pane>
+          <el-tab-pane name="requests">
+            <template #label>
+              <span class="custom-tab-icon"><component :is="RequestIcon" /></span>
+            </template>
+            <div class="manage-groups-content">
+              <div class="group-requests-list">
+                <div v-if="pagedRequests.length === 0" class="empty-requests">暂无入群申请</div>
+                <div v-for="req in pagedRequests" :key="req.id" class="group-request-item">
+                  <el-avatar :size="40" :src="req.avatar" />
+                  <div class="request-info">
+                    <div class="request-user">{{ req.username }}</div>
+                    <div class="request-group">申请加入：{{ req.groupName }}</div>
+                    <div class="request-time">{{ req.time }}</div>
+                  </div>
+                  <div class="request-actions">
+                    <DangerButton type="primary" size="small">同意</DangerButton>
+                    <DangerButton type="danger" size="small">拒绝</DangerButton>
+                  </div>
+                </div>
+              </div>
+              <div class="pagination-container">
+                <el-pagination
+                  v-model:current-page="requestsPage"
+                  v-model:page-size="requestsPageSize"
+                  :page-sizes="[5, 10, 20, 50]"
+                  :total="mockRequests.length"
+                  layout="total, sizes, prev, pager, next"
+                  @size-change="val => { requestsPageSize = val; requestsPage = 1; }"
+                  @current-change="val => requestsPage = val"
+                />
+              </div>
+            </div>
+          </el-tab-pane>
+        </el-tabs>
+      </FullScreenDialog>
+
+      <!-- 头像上传弹窗 -->
+      <FullScreenDialog v-model:visible="showAvatarUploadDialog" title="上传头像">
+        <div class="avatar-upload-dialog-content">
+          <div class="avatar-upload-drop" 
+               @dragover.prevent 
+               @drop.prevent="handleDropAvatar"
+               @click="avatarInputRef.click()">
+            <input type="file" accept="image/*" ref="avatarInputRef" style="display:none" @change="handleAvatarFileChange" />
+            <div v-if="avatarPreview" class="avatar-preview-container">
+              <img :src="avatarPreview" class="avatar-preview-img" />
+             
+            </div>
+            <div v-else class="avatar-upload-tip">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <path d="M19 13H13V19H11V13H5V11H11V5H13V11H19V13Z" fill="#409EFF"/>
+              </svg>
+              <p>拖拽图片到此处或点击选择图片</p>
+            </div>
+          </div>
+          <div class="avatar-upload-actions">
+            <DangerButton type="danger" @click="cancelAvatarUpload" :disabled="!avatarFile">
+              取消选择
+            </DangerButton>
+            <DangerButton type="primary" :loading="avatarUploading" :disabled="!avatarFile" @click="handleAvatarUpload">
+              上传头像
+            </DangerButton>
+          </div>
         </div>
       </FullScreenDialog>
+
+      <ExpDialog v-model:visible="showExpDialog" title="头像上传成功！" />
+      
+      <!-- 群聊详情抽屉 -->
+      <GroupDetailDrawer 
+        v-model:visible="showGroupDrawer"
+        :group="selectedGroupForDrawer"
+      />
     </main>
 
 
@@ -299,8 +389,8 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
-import { View, Setting, Delete, Search, SwitchButton, Plus, Edit, Check, Close } from '@element-plus/icons-vue';
+import { ref, computed, onMounted, watch, h } from 'vue';
+
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { useRouter } from 'vue-router';
 import UserDetailPopup from '@/components/UserDetailPopup.vue';
@@ -308,18 +398,28 @@ import GroupDetailPopup from '@/components/GroupDetailPopup.vue';
 import DangerButton from '@/components/dangerButton.vue';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import SearchDialog from '@/components/SearchDialog.vue';
+import UserDataVisualization from '@/components/UserDataVisualization.vue';
 import { calculateLevel, calculateExpProgress, getLevelBadgeStyle as getExpLevelBadgeStyle, getStatusStyle } from '@/utils/exp';
-import { logoutService, modifyPwdService, modifyUsernameService } from '@/api/user';
+import { logoutService, modifyPwdService, modifyUsernameService, modifyAvatarService } from '@/api/user';
 import { deleteFriend } from '@/api/friend';
 import { useUserInfoStore } from '@/stores/user';
 import emitter from '@/utils/eventBus';
-
+import { getGroupDetail, getGroupMemberCount } from '@/api/room';
+import { useContactStore } from '@/stores/contact';
+import { uploadImageFile } from '@/utils/fileHandler';
+import ExpDialog from '@/components/ExpDialog.vue';
+import GroupDetailDrawer from '@/components/GroupDetailDrawer.vue';
+import { SwitchButton,Close,Edit,Delete,Search,Plus,Check,Folder,UserFilled,View,Setting,MoreFilled } from '@element-plus/icons-vue';
 const router = useRouter();
 const userInfoStore = useUserInfoStore();
+const contactStore = useContactStore();
 const userInfo = computed(() => userInfoStore.userInfo);
 
 const showFriendsDialog = ref(false);
 const friendSearchQuery = ref('');
+const showAvatarUploadDialog = ref(false);
+const showGroupDrawer = ref(false);
+const selectedGroupForDrawer = ref(null);
 
 // 等级相关数据
 const userExp = computed(() => userInfo.value.exep);
@@ -418,6 +518,10 @@ const props = defineProps({
   friendList: {
     type: Array,
     default: () => []
+  },
+  groupList: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -432,7 +536,16 @@ const friends = computed(() => props.friendList.map(friend => ({
 })));
 
 // 群聊列表数据
-const groups = ref([]);
+const groups = computed(() => props.groupList.map(group => ({
+  id: group.roomId,
+  name: group.name,
+  avatar: group.avatar,
+  memberCount: group.memberCount || 0,
+  createTime: group.createTime || '',
+  owner: group.owner || '',
+  announcement: group.groupDesc || '',
+  members: group.members || []
+})));
 
 // 根据搜索过滤好友列表
 const filteredFriends = computed(() => {
@@ -474,27 +587,24 @@ const handleView = (friend, event) => {
   showUserDetail.value = true;
 };
 
-const handleDelete = (friend) => {
-  ElMessageBox.confirm(
-    `确定要删除该好友 <span style="color: #409EFF; font-weight: bold;">${friend.name}</span> 吗？`, 
-    '提示', 
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-      dangerouslyUseHTMLString: true  // 允许使用HTML
-    }
-  )
-  .then(async () => {
+const handleDelete = async (friend) => {
+  try {
     const res = await deleteFriend(friend.id);
     if (res.code === 200) {
-      ElMessage.success('删除成功');
-      showFriendsDialog.value = false;
+      ElMessage.success('删除好友成功');
+      // 删除本地联系人数据
+      contactStore.removeContact(friend.id);
+      // 触发刷新好友列表事件
+      emitter.emit('refresh-friend-list');
+      // 触发刷新会话列表事件
+      emitter.emit('refresh-contact-list');
+    } else {
+      ElMessage.error(res.msg || '删除好友失败');
     }
-  })
-  .catch(() => {
-    // 取消删除
-  });
+  } catch (error) {
+    console.error('删除好友失败:', error);
+    ElMessage.error('删除好友失败');
+  }
 };
 
 // 群聊相关
@@ -512,22 +622,72 @@ const selectedGroup = ref({
 const groupDetailPosition = ref({ x: 0, y: 0 });
 
 // 处理群聊卡片点击
-const handleGroupClick = (group, event) => {
+const handleGroupClick = async (group, event) => {
   const rect = event.target.getBoundingClientRect();
   groupDetailPosition.value = {
     x: rect.left - 180,
     y: rect.top - 270
   };
-  
+
+  let detail = {};
+  let memberCount = 0;
+  try {
+    const [detailRes, countRes] = await Promise.all([
+      getGroupDetail(group.id),
+      getGroupMemberCount(group.id)
+    ]);
+    if (detailRes.code === 200 && detailRes.data) {
+      detail = detailRes.data;
+    }
+    if (countRes.code === 200 && typeof countRes.data === 'number') {
+      memberCount = countRes.data;
+    }
+  } catch (e) {
+    // ignore
+  }
+
   selectedGroup.value = {
     ...group,
-    createTime: group.createTime || '',
-    owner: group.owner || '',
-    announcement: group.announcement || '暂无公告…',
-    members: group.members || []
+    ...detail,
+    createTime: detail.createTime || group.createTime || '',
+    owner: detail.owner || group.owner || '',
+    announcement: detail.groupDesc || group.announcement || '暂无公告…',
+    memberCount
   };
-  
+
   showGroupDetail.value = true;
+};
+
+// 处理群聊more按钮点击
+const handleGroupMoreClick = async (group, event) => {
+
+  let detail = {};
+  let memberCount = 0;
+  try {
+    const [detailRes, countRes] = await Promise.all([
+      getGroupDetail(group.id),
+      getGroupMemberCount(group.id)
+    ]);
+    if (detailRes.code === 200 && detailRes.data) {
+      detail = detailRes.data;
+    }
+    if (countRes.code === 200 && typeof countRes.data === 'number') {
+      memberCount = countRes.data;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  selectedGroupForDrawer.value = {
+    ...group,
+    ...detail,
+    createTime: detail.createTime || group.createTime || '',
+    owner: detail.owner || group.owner || '',
+    announcement: detail.groupDesc || group.announcement || '暂无公告…',
+    memberCount
+  };
+
+  showGroupDrawer.value = true;
 };
 
 // 处理退出登录
@@ -562,7 +722,7 @@ const handleLogout = () => {
 };
 // 添加新的响应式变量
 const showAddFriendDialog = ref(false);
-const showCreateGroupDialog = ref(false);
+
 const searchResults = ref([]);
 const groupForm = ref({
   name: '',
@@ -591,16 +751,166 @@ const handleFriendRequestSent = () => {
 
 // 处理开始聊天
 const handleStartChat = (user) => {
-  // 通知 home 组件刷新联系人列表
-  emitter.emit('refresh-contact-list');
+  // 先关闭好友管理弹窗
+  showFriendsDialog.value = false;
   // 直接跳转到聊天界面
   router.push(`/chat/${user.id}`);
 };
+
+const showManageGroupsDialog = ref(false);
+const manageGroupsTab = ref('groups');
+const mockRequests = ref([
+  { id: 1, username: '用户1', groupName: '开发群', time: '2024-04-01 10:00' },
+  { id: 2, username: '用户2', groupName: '设计群', time: '2024-04-02 11:00' },
+  { id: 3, username: '用户3', groupName: '产品群', time: '2024-04-03 12:00' },
+]);
+
+const ManageIcon = {
+  name: 'ManageIcon',
+  render() {
+    return h('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '24', height: '24', viewBox: '0 0 16 16',
+      style: 'display:block;'
+    }, [
+      h('path', { fill: 'currentColor', d: 'M8 0C3.582 0 0 1.119 0 2.5v2C0 5.881 3.582 7 8 7s8-1.119 8-2.5v-2C16 1.119 12.418 0 8 0' }),
+      h('path', { fill: 'currentColor', d: 'M8 8.5C3.582 8.5 0 7.381 0 6v3c0 1.381 3.582 2.5 8 2.5s8-1.119 8-2.5V6c0 1.381-3.582 2.5-8 2.5' }),
+      h('path', { fill: 'currentColor', d: 'M8 13c-4.418 0-8-1.119-8-2.5v3C0 14.881 3.582 16 8 16s8-1.119 8-2.5v-3c0 1.381-3.582 2.5-8 2.5' })
+    ]);
+  }
+};
+const RequestIcon = {
+  name: 'RequestIcon',
+  render() {
+    return h('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '24', height: '24', viewBox: '0 0 16 16',
+      style: 'display:block;'
+    }, [
+      h('path', { fill: 'currentColor', d: 'M6 8H1V6h5V4l3 3l-3 3zm10-8v13l-6 3v-3H4V9h1v3h5V3l4-2H5v4H4V0z' })
+    ]);
+  }
+};
+
+// 分页相关变量和分页数据
+const groupsPage = ref(1);
+const groupsPageSize = ref(5);
+const requestsPage = ref(1);
+const requestsPageSize = ref(5);
+
+const pagedGroups = computed(() => {
+  const start = (groupsPage.value - 1) * groupsPageSize.value;
+  return groups.value ? groups.value.slice(start, start + groupsPageSize.value) : [];
+});
+const pagedRequests = computed(() => {
+  const start = (requestsPage.value - 1) * requestsPageSize.value;
+  return mockRequests.value.slice(start, start + requestsPageSize.value);
+});
+
+// 添加新的状态用于管理群聊弹窗中的群聊详情
+const showManageGroupDetailPopup = ref(false);
+const selectedManageGroup = ref(null);
+const manageGroupDetailPosition = ref({ x: 0, y: 0 });
+
+// 管理群聊页面中的群聊卡片点击处理
+const handleManageGroupCardClick = async (group, event) => {
+  // 获取点击元素的位置
+  const rect = event.currentTarget.getBoundingClientRect();
+  manageGroupDetailPosition.value = {
+    x: rect.right + 20,
+    y: rect.top
+  };
+  if (manageGroupDetailPosition.value.x + 280 > window.innerWidth) {
+    manageGroupDetailPosition.value.x = rect.left - 300;
+  }
+  if (manageGroupDetailPosition.value.y + 500 > window.innerHeight) {
+    manageGroupDetailPosition.value.y = window.innerHeight - 520;
+  }
+  let detail = {};
+  let memberCount = 0;
+  try {
+    const [detailRes, countRes] = await Promise.all([
+      getGroupDetail(group.id),
+      getGroupMemberCount(group.id)
+    ]);
+    if (detailRes.code === 200 && detailRes.data) {
+      detail = detailRes.data;
+    }
+    if (countRes.code === 200 && typeof countRes.data === 'number') {
+      memberCount = countRes.data;
+    }
+  } catch (e) {}
+  selectedManageGroup.value = {
+    ...group,
+    ...detail,
+    memberCount,
+    createTime: detail.createTime || group.createTime || ''
+  };
+  showManageGroupDetailPopup.value = true;
+};
+
+// 新增：管理群聊弹窗中群聊简要信息弹窗的more按钮
+const handleManageGroupMoreClick = (group) => {
+  selectedGroupForDrawer.value = group;
+  showGroupDrawer.value = true;
+};
+
+const avatarInputRef = ref(null);
+const avatarFile = ref(null);
+const avatarPreview = ref('');
+const avatarUploading = ref(false);
+const showExpDialog = ref(false);
+
+function handleDropAvatar(e) {
+  const file = e.dataTransfer.files[0];
+  if (file) setAvatarFile(file);
+}
+function handleAvatarFileChange(e) {
+  const file = e.target.files[0];
+  if (file) setAvatarFile(file);
+}
+function setAvatarFile(file) {
+  avatarFile.value = file;
+  avatarPreview.value = URL.createObjectURL(file);
+}
+function cancelAvatarUpload() {
+  avatarFile.value = null;
+  avatarPreview.value = '';
+}
+async function handleAvatarUpload() {
+  if (!avatarFile.value) return;
+  avatarUploading.value = true;
+  try {
+    const res = await uploadImageFile(avatarFile.value);
+    // 新增：上传图片后，调用后端API修改头像
+    const avatarUrl = res.data;
+    const updateRes = await modifyAvatarService(avatarUrl);
+    if (updateRes.code === 200) {
+      // 实时更新pinia userInfo中的avatar
+      userInfoStore.setUserInfo({ ...userInfo.value, avatar: avatarUrl });
+      showExpDialog.value = true;
+      // 关闭弹窗，重置状态
+      showAvatarUploadDialog.value = false;
+      avatarFile.value = null;
+      avatarPreview.value = '';
+      // 3秒后自动关闭ExpDialog
+      setTimeout(() => {
+        showExpDialog.value = false;
+      }, 1000);
+    } else {
+      throw new Error(updateRes.msg || '头像修改失败');
+    }
+  } catch (err) {
+    ElMessage.error('上传失败');
+    console.error(err);
+  } finally {
+    avatarUploading.value = false;
+  }
+}
 </script>
 
 <style scoped>
 @import '/src/assets/styles/level.css';
-
 
 .personal-center {
   padding: 0 8%;
@@ -648,18 +958,6 @@ const handleStartChat = (user) => {
   flex-wrap: wrap;
 }
 
-.more-friends {
-  width: 40px;
-  height: 40px;
-  background: #f0f2f5;
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #606266;
-  font-size: 14px;
-}
-
 .groups-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -676,6 +974,7 @@ const handleStartChat = (user) => {
   gap: 12px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
   transition: transform 0.3s ease;
+  position: relative;
 }
 
 .group-card:hover {
@@ -692,40 +991,36 @@ const handleStartChat = (user) => {
   transition: all 0.3s ease;
 }
 
-.group-members {
-  font-size: 14px;
-  color: #909399;
+.group-more-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(64, 158, 255, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
   transition: all 0.3s ease;
+  opacity: 0;
+  transform: scale(0.8);
 }
 
-.settings-form {
-  background: white;
-  border-radius: 12px;
-  padding: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+.group-card:hover .group-more-btn {
+  opacity: 1;
+  transform: scale(1);
 }
 
-.settings-form :deep(.el-input__wrapper) {
-  border: 1px solid #dcdfe6;
-  border-radius: 11px;
-  background-color: #f5f7fa;
-  transition: all 0.3s ease;
+.group-more-btn:hover {
+  background: rgba(64, 158, 255, 0.2);
+  transform: scale(1.1);
 }
 
-.settings-form :deep(.el-input__inner) {
-  color: #303133;
-  font-size: 14px;
-}
-
-.settings-form :deep(.el-input__wrapper:hover) {
-  border-color: #c0c4cc;
-  background-color: #eef1f6;
-}
-
-.settings-form :deep(.el-input__wrapper.is-focus) {
-  border-color: #409eff;
-  background-color: #ffffff;
-  box-shadow: 0 0 0 2px rgba(64, 158, 255, 0.2);
+.group-more-btn .el-icon {
+  color: #409eff;
+  font-size: 16px;
 }
 
 .name-level {
@@ -764,7 +1059,7 @@ const handleStartChat = (user) => {
 .friends-dialog-content {
   max-height: 60vh;
   overflow-y: auto;
-  padding: 0;
+  padding: 10px;
 }
 
 .friends-list-container {
@@ -844,110 +1139,470 @@ const handleStartChat = (user) => {
   white-space: nowrap;
 }
 
-.user-detail-popup-overlay {
-  position: fixed;
-  z-index: 9999 !important;
-  background: var(--light-sidebar-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-  width: 320px;
-  overflow: hidden;
-  animation: slideIn 0.3s ease;
-  pointer-events: auto;
-}
-
-:deep(.user-detail-popup) {
-  z-index: 9999 !important;
-}
-
-:deep(.user-detail-content) {
-  position: relative;
-  z-index: 10000 !important;
-}
-
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.user-detail-content {
-  padding: 20px;
-}
-
-.user-header {
+.empty-state {
   display: flex;
-  gap: 16px;
+  justify-content: center;
+  align-items: center;
+  min-height: 200px;
+  padding: 40px 0;
+}
+
+.empty-state :deep(.el-empty) {
+  padding: 0;
+}
+
+.empty-state :deep(.el-empty__image) {
+  width: 120px;
+  height: 120px;
+}
+
+.empty-text {
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  margin: 8px 0 16px;
+}
+
+.empty-state :deep(.el-button) {
+  padding: 8px 20px;
+  font-size: 14px;
+}
+
+.empty-state :deep(.el-button .el-icon) {
+  margin-right: 4px;
+}
+
+.content-box {
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
+  animation: fadeIn 0.3s ease-out;
+}
+
+.content-box.profile-section {
+  background-image: url('/src/assets/image/mount.svg');
+  background-size: cover;
+  background-position: bottom;
+  background-repeat: no-repeat;
+  animation: waveMove 10s ease-in-out infinite alternate;
+}
+
+.content-box-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #ebeef5;
+}
+
+.content-box-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+}
+
+.content-box-body {
+  padding: 8px 0;
+}
+
+.social-section {
+  margin: 24px 0;
+  background-image: url('/src/assets/image/social.svg');
+  background-size: cover;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+.social-part {
+  padding: 20px 0;
+}
+
+.part-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
 }
 
-.user-info {
-  flex: 1;
+.part-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #303133;
+  margin: 0;
 }
 
-.user-name-level {
+.divider {
+  height: 1px;
+  background: #ebeef5;
+  margin: 20px 0;
+}
+
+.edit-icon {
+  color: #ee3e4d;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.edit-icon:hover {
+  transform: scale(1.1);
+}
+
+.popover-header {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 8px;
+  margin-bottom: 12px;
+}
+
+:deep(.el-popover) {
+  background: transparent;
+}
+
+.popover-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--el-text-color-primary);
+}
+
+.close-icon {
+  cursor: pointer;
+  padding: 4px;
+  color: var(--el-text-color-secondary);
+  transition: all 0.3s ease;
+}
+
+.close-icon:hover {
+  color: var(--el-color-danger);
+  transform: scale(1.1);
+}
+
+.manage-groups-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 32px;
+  padding: 40px;
+}
+
+.manage-group-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+  padding: 32px 16px 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  transition: box-shadow 0.2s;
+  cursor: pointer;
+  position: relative;
+  z-index: 1;
+}
+
+.manage-group-card:hover {
+  box-shadow: 0 4px 24px rgba(64,158,255,0.18);
+  transform: translateY(-5px);
+}
+
+.manage-group-info {
+  text-align: center;
+  margin-top: 16px;
+}
+
+.manage-group-info .group-name {
+  font-size: 18px;
+  font-weight: 600;
   margin-bottom: 4px;
 }
 
-.user-name-level h3 {
-  margin: 0;
-  font-size: 18px;
+.manage-groups-tabs {
+  padding: 16px 0;
+}
+
+.manage-groups-tabs :deep(.el-tabs__nav) {
+  border-bottom: 1px solid #ebeef5;
+}
+
+.manage-groups-tabs :deep(.el-tabs__item) {
+  font-size: 16px;
+  padding: 0 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 48px;
+}
+
+.custom-tab-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+}
+
+.manage-groups-tabs :deep(.el-tabs__item .custom-tab-icon) {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  transition: background 0.2s, color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.manage-groups-tabs :deep(.el-tabs__item:hover .custom-tab-icon),
+.manage-groups-tabs :deep(.el-tabs__item.is-active .custom-tab-icon) {
+  background: #e6f0ff;
+  color: #409EFF;
+}
+
+.group-requests-list {
+  padding: 20px;
+}
+
+.empty-requests {
+  text-align: center;
+  color: var(--el-text-color-secondary);
+  font-size: 14px;
+  margin: 8px 0;
+}
+
+.group-request-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: rgba(255,255,255,0.98);
+  border-radius: 12px;
+  transition: all 0.3s ease;
+  margin: 16px 0;
+  box-shadow: 0 2px 12px rgba(64,158,255,0.06);
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(255,255,255,0.08);
+}
+
+.request-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.request-user {
+  font-size: 14px;
   font-weight: 600;
   color: var(--light-text);
 }
 
-.user-status {
-  margin: 0;
-  font-size: 14px;
+.request-group {
+  font-size: 12px;
   color: var(--light-secondary-text);
 }
 
-.user-actions {
-  margin-bottom: 20px;
-}
-
-.user-actions .el-button {
-  width: 100%;
-  justify-content: center;
-  gap: 8px;
-}
-
-.user-details {
-  border-top: 1px solid var(--light-border);
-  padding-top: 16px;
-}
-
-.detail-item {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 12px;
-}
-
-.detail-item:last-child {
-  margin-bottom: 0;
-}
-
-.detail-item .label {
-  color: var(--light-secondary-text);
-  font-size: 14px;
-  transition: all 0.3s ease;
-}
-
-.detail-item .value {
+.request-time {
+  font-size: 12px;
   color: var(--light-text);
+}
+
+.request-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.manage-groups-content {
+  position: relative;
+  min-height: 400px;
+  padding-bottom: 72px;
+  overflow: visible;
+  z-index: 1;
+}
+
+:deep(.el-tabs__nav-scroll) {
+  padding-left: 50px;
+}
+
+.pagination-container {
+  margin-top: 16px;
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
+:deep(.el-pagination) {
+  --el-pagination-button-color: var(--light-text);
+  --el-pagination-hover-color: var(--primary-color);
+  --el-pagination-button-bg-color: var(--light-sidebar-bg);
+  --el-pagination-button-disabled-color: var(--light-secondary-text);
+  --el-pagination-button-disabled-bg-color: var(--light-sidebar-bg);
+}
+
+:deep(.el-pagination .el-select .el-input) {
+  width: 100px;
+}
+
+:deep(.el-pagination .el-select .el-input .el-input__wrapper) {
+  background-color: var(--light-sidebar-bg);
+  box-shadow: none;
+  border: 1px solid var(--light-border);
+}
+
+.friends-dialog-content .search-section :deep(.el-input__wrapper) {
+  border: none !important;
+  background: rgba(240, 245, 255, 0.85) !important;
+  border-radius: 12px !important;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.06);
+  transition: box-shadow 0.2s, background 0.2s;
+}
+
+.friends-dialog-content .search-section :deep(.el-input__wrapper.is-focus) {
+  background: #fff !important;
+  box-shadow: 0 0 0 2px #409eff33;
+}
+
+.friends-dialog-content .search-section :deep(.el-input__inner) {
+  background: transparent !important;
+  color: #222;
+  font-size: 16px;
+  font-weight: 500;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.friends-dialog-content .search-section :deep(.el-input__inner::placeholder) {
+  color: #a0b4d8;
+  opacity: 1;
+  font-weight: 400;
+}
+
+.friends-dialog-content .search-section :deep(.el-icon) {
+  color: #409eff;
+  opacity: 0.8;
+}
+
+.group-request-item:hover {
+  background: rgba(255,255,255,0.95);
+  box-shadow: 0 4px 24px rgba(64,158,255,0.18);
+  transform: translateY(-3px) scale(1.02);
+  transition: all 0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+:deep(.manage-group-detail-popup) {
+  position: absolute !important;
+  z-index: 3000 !important;
+}
+
+:deep(.manage-group-detail-popup .user-detail-popup) {
+  position: absolute;
+  z-index: 3000 !important;
+}
+
+:deep(.el-overlay) {
+  z-index: 2000 !important;
+}
+
+:deep(.el-dialog) {
+  z-index: 2001 !important;
+}
+
+.avatar-upload-icon {
+  margin-left: 100px;
+  position: absolute;
+  top: 75%;
+  background: rgba(64, 158, 255, 1);
+  box-shadow: 0 4px 12px rgba(64, 158, 255, 0.3);
+  color: #fff;
+  border-radius: 50%;
+  width: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  scale: 0.7;
+  z-index: 2;
+}
+
+.avatar-upload-dialog-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+  padding: 32px 0;
+}
+
+.avatar-upload-drop {
+  width: 240px;
+  height: 240px;
+  border: 2px dashed #409eff;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #f8f9fa;
+  cursor: pointer;
+  margin-bottom: 12px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.avatar-upload-drop:hover {
+  border-color: #66b1ff;
+  background: #f0f8ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(64, 158, 255, 0.1);
+}
+
+.avatar-upload-tip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: #909399;
   font-size: 14px;
-  max-width: 200px;
-  text-align: right;
-  word-break: break-all;
-  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.avatar-upload-tip p {
+  margin: 0;
+  font-weight: 500;
+}
+
+.avatar-preview-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+.avatar-preview-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+  border: 2px solid #fff;
+}
+
+.avatar-upload-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}
+
+.avatar-upload-actions .danger-button {
+  min-width: 100px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.logout-btn {
+  margin-left: auto;
+}
+
+.logout-btn .el-icon {
+  margin-right: 4px;
 }
 
 /* 暗色模式适配 */
@@ -956,19 +1611,9 @@ const handleStartChat = (user) => {
 }
 
 .dark-mode .friends-list,
-.dark-mode .group-card,
-.dark-mode .settings-form {
+.dark-mode .group-card {
   background: #2b2d3a;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-}
-
-.dark-mode .more-friends {
-  background: #3a3d4a;
-  color: #a3a6ad;
-}
-
-.dark-mode .group-members {
-  color: #a3a6ad;
 }
 
 .dark-mode .exp-bar {
@@ -1027,386 +1672,6 @@ const handleStartChat = (user) => {
   color: var(--dark-secondary-text);
 }
 
-.dark-mode .user-detail-popup-overlay {
-  background: var(--dark-sidebar-bg);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-}
-
-.dark-mode .user-name-level h3 {
-  color: var(--dark-text);
-}
-
-.dark-mode .user-status {
-  color: var(--dark-secondary-text);
-}
-
-.dark-mode .user-details {
-  border-top-color: var(--dark-border);
-}
-
-.dark-mode .detail-item .label {
-  color: var(--dark-secondary-text);
-}
-
-.dark-mode .detail-item .value {
-  color: var(--dark-text);
-}
-
-.user-hub-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 24px;
-}
-
-.user-hub-header h2 {
-  margin: 0;
-  font-size: 24px;
-  font-weight: 600;
-  color: var(--light-text);
-  transition: all 0.3s ease;
-}
-
-.dark-mode .user-hub-header h2 {
-  color: var(--dark-text);
-}
-
-.logout-btn {
-  margin-left: auto;
-  padding: 4px 8px;
-  font-size: 14px;
-}
-
-.logout-btn .el-icon {
-  margin-right: 4px;
-}
-
-/* 群聊弹窗样式 */
-.group-detail-popup-overlay {
-  position: fixed;
-  z-index: 9999 !important;
-  background: var(--light-sidebar-bg);
-  border-radius: 12px;
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
-  width: 320px;
-  overflow: hidden;
-  pointer-events: auto;
-  transform-origin: bottom center;
-  animation: slideDown 0.3s ease;
-}
-
-@keyframes slideDown {
-  from {
-    opacity: 0;
-    transform: translateY(-20px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
-}
-
-/* 暗色模式适配 */
-.dark-mode .group-detail-popup-overlay {
-  background: var(--dark-sidebar-bg);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-}
-
-:deep(.el-button) {
-  background-color: var(--el-color-primary);
-  color: white !important;
-  border: none;
-  transition: all 0.3s ease;
-}
-
-:deep(.el-button:hover) {
-  background-color: var(--el-color-primary-light-3);
-  color: white;
-}
-/*  */
-:deep(.el-button:active) {
-  background-color: var(--el-color-primary-dark-2);
-  color: white;
-}
-
-.empty-state {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 200px;
-  padding: 40px 0;
-}
-
-.empty-state :deep(.el-empty) {
-  padding: 0;
-}
-
-.empty-state :deep(.el-empty__image) {
-  width: 120px;
-  height: 120px;
-}
-
-.empty-text {
-  color: var(--el-text-color-secondary);
-  font-size: 14px;
-  margin: 8px 0 16px;
-}
-
-.empty-state :deep(.el-button) {
-  padding: 8px 20px;
-  font-size: 14px;
-}
-
-.empty-state :deep(.el-button .el-icon) {
-  margin-right: 4px;
-}
-
-/* 暗色模式适配 */
-.dark-mode .empty-text {
-  color: var(--el-text-color-secondary);
-}
-
-/* 添加新的样式 */
-.add-friend-content,
-.create-group-content {
-  padding: 20px;
-}
-
-.search-input {
-  margin-bottom: 20px;
-}
-
-.search-results {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.user-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.user-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateY(-2px);
-}
-
-.user-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.username {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.user-id {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.no-results {
-  padding: 40px 0;
-}
-
-.avatar-uploader {
-  text-align: center;
-}
-
-.avatar-uploader .avatar {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-.avatar-uploader .avatar-uploader-icon {
-  font-size: 28px;
-  color: #8c939d;
-  width: 100px;
-  height: 100px;
-  border: 1px dashed var(--el-border-color);
-  border-radius: 50%;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  cursor: pointer;
-}
-
-.avatar-uploader .avatar-uploader-icon:hover {
-  border-color: var(--el-color-primary);
-}
-
-/* 暗色模式适配 */
-.dark-mode .user-item {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-
-.dark-mode .avatar-uploader .avatar-uploader-icon {
-  border-color: var(--el-border-color-darker);
-  color: var(--el-text-color-secondary);
-}
-
-/* 修改和添加新的样式 */
-.search-content {
-  padding: 20px;
-}
-
-.search-tabs {
-  display: flex;
-  gap: 20px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid var(--el-border-color-light);
-  padding-bottom: 12px;
-}
-
-.tab-item {
-  font-size: 16px;
-  color: var(--el-text-color-regular);
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  transition: all 0.3s ease;
-}
-
-.tab-item:hover {
-  color: var(--el-color-primary);
-}
-
-.tab-item.active {
-  color: var(--el-color-primary);
-  font-weight: 600;
-}
-
-.search-input {
-  margin-bottom: 20px;
-}
-
-.result-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  padding: 16px;
-  background: rgba(255, 255, 255, 0.5);
-  border-radius: 12px;
-  transition: all 0.3s ease;
-}
-
-.result-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-  transform: translateY(-2px);
-}
-
-.item-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.name {
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.id {
-  font-size: 12px;
-  color: var(--el-text-color-secondary);
-}
-
-.member-count {
-  font-size: 12px;
-  color: var(--el-color-primary);
-}
-
-.no-results {
-  padding: 40px 0;
-}
-
-/* 暗色模式适配 */
-.dark-mode .result-item {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.dark-mode .result-item:hover {
-  background: rgba(255, 255, 255, 0.15);
-}
-
-.dark-mode .search-tabs {
-  border-bottom-color: var(--el-border-color-darker);
-}
-
-.action-btn {
-  background: none;
-  border: none;
-  padding: 8px;
-  cursor: pointer;
-  border-radius: 8px;
-  transition: all 0.3s ease;
-  color: #909399; /* 默认颜色为灰色 */
-}
-
-.action-btn:hover {
-  background-color: rgba(64, 158, 255, 0.1);
-  color: #409EFF; /* 悬停时变为蓝色 */
-}
-
-.action-btn svg {
-  width: 24px;
-  height: 24px;
-  transition: all 0.3s ease;
-}
-
-.action-btn:hover svg {
-  transform: scale(1.1);
-}
-
-
-/* 添加内嵌 box 样式 */
-.content-box {
-  border-radius: 12px;
-  padding: 24px;
-  margin-bottom: 24px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.1);
-}
-/* 动画要精确匹配 */
-.content-box.profile-section {
-  background-image: url('/src/assets/image/mount.svg');
-  background-size: cover;
-  background-position: bottom;
-  background-repeat: no-repeat;
-  animation: waveMove 10s ease-in-out infinite alternate;
-}
-
-.content-box-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid #ebeef5;
-}
-
-.content-box-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-}
-
-.content-box-body {
-  padding: 8px 0;
-}
-
-/* 暗色模式适配 */
 .dark-mode .content-box {
   background: #2b2d3a;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
@@ -1432,20 +1697,6 @@ const handleStartChat = (user) => {
   color: #e5eaf3;
 }
 
-
-.content-box {
-  animation: fadeIn 0.3s ease-out;
-}
-
-/* 添加新的样式 */
-.social-section {
-  margin: 24px 0;
-  background-image: url('/src/assets/image/social.svg');
-  background-size: cover;
-  background-position: bottom;
-  background-repeat: no-repeat;
-}
-
 .dark-mode .social-section {
   margin: 24px 0;
   background-image: url('/src/assets/image/socialDark.svg');
@@ -1454,66 +1705,6 @@ const handleStartChat = (user) => {
   background-repeat: no-repeat;
 }
 
-.social-tabs {
-  padding: 16px 0;
-}
-
-.social-tabs :deep(.el-tabs__nav) {
-  border-bottom: 1px solid #ebeef5;
-}
-
-.social-tabs :deep(.el-tabs__item) {
-  font-size: 16px;
-  padding: 0 24px;
-}
-
-.social-tabs :deep(.el-tabs__item.is-active) {
-  font-weight: 600;
-}
-
-/* 暗色模式适配 */
-.dark-mode .social-tabs :deep(.el-tabs__nav) {
-  border-bottom-color: #363636;
-}
-
-.dark-mode .social-tabs :deep(.el-tabs__item) {
-  color: #909399;
-}
-
-.dark-mode .social-tabs :deep(.el-tabs__item.is-active) {
-  color: #409eff;
-}
-
-/* 社交关系部分的新样式 */
-.social-section {
-  margin: 24px 0;
-}
-
-.social-part {
-  padding: 20px 0;
-}
-
-.part-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
-}
-
-.part-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #303133;
-  margin: 0;
-}
-
-.divider {
-  height: 1px;
-  background: #ebeef5;
-  margin: 20px 0;
-}
-
-/* 暗色模式适配 */
 .dark-mode .part-title {
   color: #e5eaf3;
 }
@@ -1522,51 +1713,101 @@ const handleStartChat = (user) => {
   background: #363636;
 }
 
-/* 调整空状态样式 */
-.empty-state {
-  padding: 40px 0;
-}
-
-.empty-text {
-  color: #909399;
-  margin: 8px 0;
-}
-
 .dark-mode .empty-text {
   color: #a8abb2;
 }
 
-/* 表单样式 */
-.settings-section :deep(.el-form-item__label) {
-  color: #08325c !important;
-  font-weight: 500;
-}
-
-.settings-section :deep(.el-input__inner) {
-  color: #1298af;
-}
-
-.settings-section :deep(.el-input__inner::placeholder) {
-  color: #a0cfff;
-}
-
-/* 暗色模式适配 */
-.dark-mode .settings-section :deep(.el-form-item__label) {
-  color: #62b0ffee !important;
-}
-
-
-.dark-mode .settings-section :deep(.el-input__inner::placeholder) {
-  color: #d3e4f5;
-}
-
-/* 暗色模式适配 */
 .dark-mode .stats-card .stat-value {
   color: #59e7d4;
 }
 
 .dark-mode .stats-card .stat-label {
   color: #e4e4e4;
+}
+
+.dark-mode .manage-groups-tabs :deep(.el-tabs__item:hover .custom-tab-icon),
+.dark-mode .manage-groups-tabs :deep(.el-tabs__item.is-active .custom-tab-icon) {
+  background: #223355;
+  color: #6CA6FF;
+}
+
+.dark-mode .group-request-item {
+  background: rgba(44, 62, 80, 0.92);
+  color: #eaf6ff;
+  box-shadow: 0 2px 12px rgba(64,158,255,0.10);
+  text-shadow: 0 1px 2px rgba(0,0,0,0.18);
+}
+
+.dark-mode .group-request-item:hover {
+  background: rgba(44, 62, 80, 0.85);
+  box-shadow: 0 4px 24px rgba(64,158,255,0.22);
+  transform: translateY(-3px) scale(1.02);
+}
+
+.dark-mode :deep(.el-pagination) {
+  --el-pagination-button-color: var(--dark-text);
+  --el-pagination-hover-color: var(--primary-color);
+  --el-pagination-button-bg-color: var(--dark-sidebar-bg);
+  --el-pagination-button-disabled-color: var(--dark-secondary-text);
+  --el-pagination-button-disabled-bg-color: var(--dark-sidebar-bg);
+}
+
+.dark-mode :deep(.el-pagination .el-select .el-input .el-input__wrapper) {
+  background-color: var(--dark-sidebar-bg);
+  border-color: var(--dark-border);
+}
+
+.dark-mode .friends-dialog-content .search-section :deep(.el-input__wrapper) {
+  background: rgba(30, 40, 60, 0.95) !important;
+  box-shadow: 0 2px 8px rgba(64,158,255,0.10);
+}
+
+.dark-mode .friends-dialog-content .search-section :deep(.el-input__wrapper.is-focus) {
+  background: #232b3a !important;
+  box-shadow: 0 0 0 2px #409eff55;
+}
+
+.dark-mode .friends-dialog-content .search-section :deep(.el-input__inner) {
+  color: #eaf6ff;
+}
+
+.dark-mode .friends-dialog-content .search-section :deep(.el-input__inner::placeholder) {
+  color: #6c8bbd;
+}
+
+.dark-mode .friends-dialog-content .search-section :deep(.el-icon) {
+  color: #6ca6ff;
+  opacity: 0.9;
+}
+
+.dark-mode .avatar-upload-drop {
+  background: #2b2d3a;
+  border-color: #409eff;
+}
+
+.dark-mode .avatar-upload-drop:hover {
+  background: #1e2a3a;
+  border-color: #66b1ff;
+}
+
+.dark-mode .avatar-upload-tip {
+  color: #a8abb2;
+}
+
+.dark-mode .avatar-preview-img {
+  border-color: #363636;
+}
+
+:deep(.dark-mode) .popover-title {
+  color: var(--el-text-color-primary);
+}
+
+:deep(.dark-mode) .close-icon {
+  color: var(--el-text-color-secondary);
+}
+
+:deep(.dark-mode) .close-icon:hover {
+  color: var(--el-color-danger);
 }
 
 @keyframes waveMove {
@@ -1581,52 +1822,20 @@ const handleStartChat = (user) => {
   }
 }
 
-.edit-icon {
-  color: #409EFF;
-  cursor: pointer;
+:deep(.el-button) {
+  background-color: var(--el-color-primary);
+  color: white !important;
+  border: none;
   transition: all 0.3s ease;
 }
 
-.edit-icon:hover {
-  transform: scale(1.1);
+:deep(.el-button:hover) {
+  background-color: var(--el-color-primary-light-3);
+  color: white;
 }
 
-.popover-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
+:deep(.el-button:active) {
+  background-color: var(--el-color-primary-dark-2);
+  color: white;
 }
-
-.popover-title {
-  font-size: 16px;
-  font-weight: 600;
-  color: var(--el-text-color-primary);
-}
-
-.close-icon {
-  cursor: pointer;
-  padding: 4px;
-  color: var(--el-text-color-secondary);
-  transition: all 0.3s ease;
-}
-
-.close-icon:hover {
-  color: var(--el-color-danger);
-  transform: scale(1.1);
-}
-
-/* 暗色模式适配 */
-:deep(.dark-mode) .popover-title {
-  color: var(--el-text-color-primary);
-}
-
-:deep(.dark-mode) .close-icon {
-  color: var(--el-text-color-secondary);
-}
-
-:deep(.dark-mode) .close-icon:hover {
-  color: var(--el-color-danger);
-}
-
 </style>

@@ -41,7 +41,7 @@
                     v-model:current-page="sentFriendCurrentPage"
                     v-model:page-size="pageSize"
                     :page-sizes="[5, 10, 20, 50]"
-                    :total="total"
+                    :total="sentFriendTotal"
                     layout="total, sizes, prev, pager, next"
                     @size-change="handleSentFriendSizeChange"
                     @current-change="handleSentFriendCurrentChange"
@@ -78,7 +78,7 @@
                     v-model:current-page="sentGroupCurrentPage"
                     v-model:page-size="pageSize"
                     :page-sizes="[5, 10, 20, 50]"
-                    :total="sentGroupRequests.length"
+                    :total="sentGroupTotal"
                     layout="total, sizes, prev, pager, next"
                     @size-change="handleSentGroupSizeChange"
                     @current-change="handleSentGroupCurrentChange"
@@ -134,7 +134,7 @@
                     v-model:current-page="receivedFriendCurrentPage"
                     v-model:page-size="pageSize"
                     :page-sizes="[5, 10, 20, 50]"
-                    :total="receivedFriendRequests.length"
+                    :total="receivedFriendTotal"
                     layout="total, sizes, prev, pager, next"
                     @size-change="handleReceivedFriendSizeChange"
                     @current-change="handleReceivedFriendCurrentChange"
@@ -177,7 +177,7 @@
                     v-model:current-page="receivedGroupCurrentPage"
                     v-model:page-size="pageSize"
                     :page-sizes="[5, 10, 20, 50]"
-                    :total="receivedGroupRequests.length"
+                    :total="receivedGroupTotal"
                     layout="total, sizes, prev, pager, next"
                     @size-change="handleReceivedGroupSizeChange"
                     @current-change="handleReceivedGroupCurrentChange"
@@ -213,7 +213,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from 'vue';
+import { ref, computed, onMounted, watch, onUnmounted } from 'vue';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import { Delete } from '@element-plus/icons-vue';
 import UserDetailPopup from '@/components/UserDetailPopup.vue';
@@ -221,6 +221,8 @@ import GroupDetailPopup from '@/components/GroupDetailPopup.vue';
 import DangerButton from '@/components/dangerButton.vue';
 import { useRouter } from 'vue-router';
 import { getMyFriendApplyList, getMyFriendReceiveList, handleFriendApply } from '@/api/friend';
+// TODO: 导入群聊相关API
+// import { getMyGroupApplyList, getMyGroupReceiveList } from '@/api/friend';
 import { calculateLevel } from '@/utils/exp';
 import { useUserInfoStore } from '@/stores/user';
 import { formatDate } from '@/utils/time';
@@ -348,7 +350,12 @@ const sentFriendCurrentPage = ref(1);
 const sentGroupCurrentPage = ref(1);
 const receivedFriendCurrentPage = ref(1);
 const receivedGroupCurrentPage = ref(1);
-const total = ref(0);
+
+// 为每个列表维护独立的总数
+const sentFriendTotal = ref(0);
+const sentGroupTotal = ref(0);
+const receivedFriendTotal = ref(0);
+const receivedGroupTotal = ref(0);
 
 // 获取我发送的好友申请列表
 const fetchSentFriendRequests = async () => {
@@ -369,10 +376,8 @@ const fetchSentFriendRequests = async () => {
         userStatus: item.userStatus,
         level: calculateLevel(item.exep || 0)
       }));
-      // 更新总数
-      total.value = res.data.total;
-      console.log(sentFriendRequests.value.status) // undefined
-      console.log(sentFriendRequests.value.friendId)
+      // 更新发送列表的总数
+      sentFriendTotal.value = res.data.total;
     }
   } catch (error) {
     console.error('获取好友申请列表失败:', error);
@@ -400,13 +405,49 @@ const fetchReceivedFriendRequests = async () => {
         userStatus: item.userStatus,
         level: calculateLevel(item.exep || 0)
       }));
-      // 更新总数
-      total.value = res.data.total;
+      // 更新接收列表的总数
+      receivedFriendTotal.value = res.data.total;
     }
   } catch (error) {
     console.error('获取收到的好友申请列表失败:', error);
     ElMessage.error('获取收到的好友申请列表失败');
   }
+};
+
+// 获取我发送的群聊申请列表 - TODO: 等待API实现
+const fetchSentGroupRequests = async () => {
+  // try {
+  //   const res = await getMyGroupApplyList({
+  //     uid: useUserInfoStore().userInfo.uid,
+  //     page: sentGroupCurrentPage.value,
+  //     pageSize: pageSize.value
+  //   });
+  //   if (res.code === 200) {
+  //     sentGroupRequests.value = res.data.records;
+  //     sentGroupTotal.value = res.data.total;
+  //   }
+  // } catch (error) {
+  //   console.error('获取群聊申请列表失败:', error);
+  //   ElMessage.error('获取群聊申请列表失败');
+  // }
+};
+
+// 获取我收到的群聊申请列表 - TODO: 等待API实现
+const fetchReceivedGroupRequests = async () => {
+  // try {
+  //   const res = await getMyGroupReceiveList({
+  //     uid: useUserInfoStore().userInfo.uid,
+  //     page: receivedGroupCurrentPage.value,
+  //     pageSize: pageSize.value
+  //   });
+  //   if (res.code === 200) {
+  //     receivedGroupRequests.value = res.data.records;
+  //     receivedGroupTotal.value = res.data.total;
+  //   }
+  // } catch (error) {
+  //   console.error('获取收到的群聊申请列表失败:', error);
+  //   ElMessage.error('获取收到的群聊申请列表失败');
+  // }
 };
 
 // 状态码转换为状态文本
@@ -424,10 +465,19 @@ watch([sentFriendCurrentPage, pageSize], () => {
   fetchSentFriendRequests();
 });
 
-// 监听收到的申请分页变化
+// TODO: 等待群聊API实现后启用
+// watch([sentGroupCurrentPage, pageSize], () => {
+//   fetchSentGroupRequests();
+// });
+
 watch([receivedFriendCurrentPage, pageSize], () => {
   fetchReceivedFriendRequests();
 });
+
+// TODO: 等待群聊API实现后启用
+// watch([receivedGroupCurrentPage, pageSize], () => {
+//   fetchReceivedGroupRequests();
+// });
 
 // 处理分页大小变化
 const handleSentFriendSizeChange = (val) => {
@@ -444,6 +494,24 @@ const handleSentFriendCurrentChange = (val) => {
 onMounted(() => {
   fetchSentFriendRequests();
   fetchReceivedFriendRequests();
+  // TODO: 等待群聊API实现后启用
+  // fetchSentGroupRequests();
+  // fetchReceivedGroupRequests();
+  
+  // 监听刷新 mail 数据的事件
+  emitter.on('refresh-mail-data', () => {
+    console.log('收到刷新 mail 数据的事件');
+    fetchSentFriendRequests();
+    fetchReceivedFriendRequests();
+    // TODO: 等待群聊API实现后启用
+    // fetchSentGroupRequests();
+    // fetchReceivedGroupRequests();
+  });
+});
+
+// 组件卸载时移除事件监听
+onUnmounted(() => {
+  emitter.off('refresh-mail-data');
 });
 
 // 处理页码改变

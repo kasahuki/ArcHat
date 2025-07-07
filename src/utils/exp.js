@@ -78,4 +78,38 @@ export const getStatusStyle = (isOnline) => {
     fontSize: '12px',
     fontWeight: '500'
   };
-}; 
+};
+
+/**
+ * 转义 HTML 字符
+ * @param {string} str
+ * @returns {string}
+ */
+export function escapeHtml(str) {
+  return str.replace(/[&<>"']/g, function (tag) {
+    const charsToReplace = {
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      '"': '&quot;',
+      "'": '&#39;'
+    };
+    return charsToReplace[tag] || tag;
+  });
+}
+
+/**
+ * 将文本中的 URL 转为可点击的 a 标签
+ * @param {string} text
+ * @returns {string}
+ */
+export function linkify(text) {
+  if (!text) return '';
+  // 先转义 HTML
+  let escaped = escapeHtml(text);
+  // 匹配 http(s) 链接
+  const urlRegex = /(https?:\/\/[\w\-._~:/?#[\]@!$&'()*+,;=%]+)(?![^<]*>|[^&;]+;)/g;
+  return escaped.replace(urlRegex, function (url) {
+    return `<a href="${url}" target="_blank" rel="noopener noreferrer">${url}</a>`;
+  });
+} 
