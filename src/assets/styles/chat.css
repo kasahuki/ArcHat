@@ -1,4 +1,5 @@
 /* Chat/GroupChat 公共样式 */
+
 .chat-container {
   display: flex;
   flex-direction: column;
@@ -82,8 +83,7 @@
   padding: 24px 24px 10px 24px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
-  background-color: transparent;
+  gap: 30px;
   background-image: url("/src/assets/image/login.jpg");
   background-size: cover;
   background-position: center;
@@ -147,6 +147,7 @@
   justify-content: flex-start;
 }
 .chat-message-item.right {
+  margin-left: 10px;
   justify-content: flex-end;
 }
 .chat-bubble {

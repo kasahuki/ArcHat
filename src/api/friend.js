@@ -7,7 +7,7 @@ export const searchFriends = (params) => {
 
 // 添加好友
 export const addFriend = (friendId) => {
-  return request.post('/friend/add', { friendId })
+  return request.post('/friend/add',  friendId )
 }
 
 // 删除好友

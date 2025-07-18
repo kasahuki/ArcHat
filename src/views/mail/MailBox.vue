@@ -52,7 +52,7 @@
             <el-tab-pane label="群聊申请" name="group">
               <div class="mail-list">
                 <template v-if="sentGroupRequests.length > 0">
-                  <div v-for="item in set" :key="item.id" class="mail-item">
+                  <div v-for="item in sentGroupRequests" :key="item.id" class="mail-item" @click="() => { if(item.status === 0) handleEditGroupMsg(item) }">
                     <div class="mail-item-content">
                       <el-avatar 
                         :size="40" 
@@ -64,10 +64,10 @@
                         <div class="mail-header">
                           <span class="mail-name">{{ item.name }}</span>
                         </div>
-                        <div class="mail-status" :class="item.status">
-                          {{ getStatusText(item.status) }}
+                        <div class="mail-status" :class="getStatusFromCode(item.status)">
+                          {{ getStatusText(getStatusFromCode(item.status)) }}
                         </div>
-                        <div class="mail-time">{{ item.time }}</div>
+                        <div class="mail-time">{{ formatDate(item.time) }}</div>
                       </div>
                     </div>
                   </div>
@@ -85,6 +85,16 @@
                   />
                 </div>
               </div>
+              <FullScreenDialog v-model:visible="showEditMsgDialog" title="修改群聊申请留言">
+                <div style="padding: 24px;">
+                  <div style="margin-bottom: 16px; font-weight: bold;">当前留言：</div>
+                  <el-input v-model="editingMsg" type="textarea" :rows="4" placeholder="请输入申请留言..." />
+                  <div style="margin-top: 24px; display: flex; justify-content: flex-end; gap: 12px;">
+                    <DangerButton @click="handleCancelEditMsg">取消</DangerButton>
+                    <DangerButton type="success" @click="handleSaveGroupMsg">保存并发送</DangerButton>
+                  </div>
+                </div>
+              </FullScreenDialog>
             </el-tab-pane>
           </el-tabs>
         </div>
@@ -219,10 +229,11 @@ import { Delete } from '@element-plus/icons-vue';
 import UserDetailPopup from '@/components/UserDetailPopup.vue';
 import GroupDetailPopup from '@/components/GroupDetailPopup.vue';
 import DangerButton from '@/components/dangerButton.vue';
+import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import { useRouter } from 'vue-router';
 import { getMyFriendApplyList, getMyFriendReceiveList, handleFriendApply } from '@/api/friend';
 // TODO: 导入群聊相关API
-// import { getMyGroupApplyList, getMyGroupReceiveList } from '@/api/friend';
+import { getMyGroupApplyList, updateGroupApplyMsg } from '@/api/room';
 import { calculateLevel } from '@/utils/exp';
 import { useUserInfoStore } from '@/stores/user';
 import { formatDate } from '@/utils/time';
@@ -416,20 +427,27 @@ const fetchReceivedFriendRequests = async () => {
 
 // 获取我发送的群聊申请列表 - TODO: 等待API实现
 const fetchSentGroupRequests = async () => {
-  // try {
-  //   const res = await getMyGroupApplyList({
-  //     uid: useUserInfoStore().userInfo.uid,
-  //     page: sentGroupCurrentPage.value,
-  //     pageSize: pageSize.value
-  //   });
-  //   if (res.code === 200) {
-  //     sentGroupRequests.value = res.data.records;
-  //     sentGroupTotal.value = res.data.total;
-  //   }
-  // } catch (error) {
-  //   console.error('获取群聊申请列表失败:', error);
-  //   ElMessage.error('获取群聊申请列表失败');
-  // }
+  try {
+    const res = await getMyGroupApplyList({
+      page: sentGroupCurrentPage.value,
+      pageSize: pageSize.value
+    });
+    if (res.code === 200) {
+      sentGroupRequests.value = res.data.records.map(item => ({
+        id: item.id,
+        roomId: item.roomId,
+        name: item.name,
+        avatar: item.avatar || 'https://placeholder.svg?height=40&width=40&text=G',
+        msg: item.msg,
+        status: item.status, // 0: pending, 1: accepted, 2: rejected
+        time: item.updateTime
+      }));
+      sentGroupTotal.value = res.data.total;
+    }
+  } catch (error) {
+    console.error('获取群聊申请列表失败:', error);
+    ElMessage.error('获取群聊申请列表失败');
+  }
 };
 
 // 获取我收到的群聊申请列表 - TODO: 等待API实现
@@ -465,10 +483,9 @@ watch([sentFriendCurrentPage, pageSize], () => {
   fetchSentFriendRequests();
 });
 
-// TODO: 等待群聊API实现后启用
-// watch([sentGroupCurrentPage, pageSize], () => {
-//   fetchSentGroupRequests();
-// });
+watch([sentGroupCurrentPage, pageSize], () => {
+  fetchSentGroupRequests();
+});
 
 watch([receivedFriendCurrentPage, pageSize], () => {
   fetchReceivedFriendRequests();
@@ -490,12 +507,16 @@ const handleSentFriendCurrentChange = (val) => {
   sentFriendCurrentPage.value = val;
 };
 
+emitter.on('refresh-mail-data', () => {
+  fetchReceivedFriendRequests();
+});
+
 // 组件挂载时获取数据
 onMounted(() => {
   fetchSentFriendRequests();
   fetchReceivedFriendRequests();
+  fetchSentGroupRequests();
   // TODO: 等待群聊API实现后启用
-  // fetchSentGroupRequests();
   // fetchReceivedGroupRequests();
   
   // 监听刷新 mail 数据的事件
@@ -547,6 +568,36 @@ const handleReceivedGroupSizeChange = (val) => {
 const handleFriendRequestSent = () => {
   // 刷新发送的好友申请列表
   fetchSentFriendRequests();
+};
+
+const showEditMsgDialog = ref(false);
+const editingGroupItem = ref(null);
+const editingMsg = ref('');
+
+const handleEditGroupMsg = (item) => {
+  editingGroupItem.value = item;
+  editingMsg.value = item.msg || '';
+  showEditMsgDialog.value = true;
+};
+
+const handleSaveGroupMsg = async () => {
+  if (!editingGroupItem.value) return;
+  try {
+    const res = await updateGroupApplyMsg({ id: editingGroupItem.value.id, msg: editingMsg.value });
+    if (res.code === 200) {
+      ElMessage.success('修改成功');
+      showEditMsgDialog.value = false;
+      fetchSentGroupRequests();
+    } else {
+      ElMessage.error(res.msg || '修改失败');
+    }
+  } catch (e) {
+    ElMessage.error('修改失败');
+  }
+};
+
+const handleCancelEditMsg = () => {
+  showEditMsgDialog.value = false;
 };
 </script>
 
@@ -843,34 +894,16 @@ const handleFriendRequestSent = () => {
   padding: 8px 0;
 }
 
-:deep(.el-pagination) {
-  --el-pagination-button-color: var(--light-text);
-  --el-pagination-hover-color: var(--primary-color);
-  --el-pagination-button-bg-color: var(--light-sidebar-bg);
-  --el-pagination-button-disabled-color: var(--light-secondary-text);
-  --el-pagination-button-disabled-bg-color: var(--light-sidebar-bg);
-}
 
-.dark-mode :deep(.el-pagination) {
-  --el-pagination-button-color: var(--dark-text);
-  --el-pagination-hover-color: var(--primary-color);
-  --el-pagination-button-bg-color: var(--dark-sidebar-bg);
-  --el-pagination-button-disabled-color: var(--dark-secondary-text);
-  --el-pagination-button-disabled-bg-color: var(--dark-sidebar-bg);
-}
 
-:deep(.el-pagination .el-select .el-input) {
-  width: 100px;
-}
+/* 夜间模式适配 */
 
-:deep(.el-pagination .el-select .el-input .el-input__wrapper) {
-  background-color: var(--light-sidebar-bg);
-  box-shadow: none;
-  border: 1px solid var(--light-border);
-}
 
-.dark-mode :deep(.el-pagination .el-select .el-input .el-input__wrapper) {
-  background-color: var(--dark-sidebar-bg);
-  border-color: var(--dark-border);
+
+.dark-mode .el-pagination,
+.dark-mode .el-pagination * {
+  background: transparent !important;
+  background-color: transparent !important;
+  
 }
 </style> 

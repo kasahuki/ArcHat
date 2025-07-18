@@ -1,13 +1,27 @@
 <template>
   <div class="todo-list-root" @click.self="clearSelection">
-    <div class="todo-category-tabs">
+    <div class="todo-category-tabs"
+      :class="{ dragging: isDraggingTodo }"
+    >
       <div
         v-for="cat in categories"
         :key="cat.value"
-        :class="['todo-category-dot-tab', { active: currentCategory === cat.value }]"
-        :style="{ background: currentCategory === cat.value ? cat.color : cat.color+'40' }"
+        :class="[
+          'todo-category-dot-tab',
+          { active: currentCategory === cat.value },
+          { dragging: isDraggingTodo },
+          { 'dragover': draggingOverCategory === cat.value }
+        ]"
+        :style="{
+          background: currentCategory === cat.value ? cat.color : cat.color+'40',
+          transform: isDraggingTodo ? 'scale(1.5)' : '',
+          boxShadow: draggingOverCategory === cat.value ? '0 0 0 6px ' + cat.color + '55' : ''
+        }"
         @click="currentCategory = cat.value"
         :title="cat.label"
+        @dragover.prevent="onCategoryDragOver(cat)"
+        @dragleave="onCategoryDragLeave(cat)"
+        @drop.prevent="onCategoryDrop(cat)"
       >
       </div>
     </div>
@@ -27,7 +41,7 @@
         <text x="20" y="23" text-anchor="middle" font-size="13" fill="#5371f7">{{ progressPercent }}%</text>
       </svg>
       <div class="progress-label">完成进度</div>
-      <button class="todo-batch-del-btn" :disabled="!selectedIds.length" @click="batchDelete">批量删除</button>
+      <DangerButton type="danger" class="todo-batch-del-btn" :disabled="!selectedIds.length" @click="batchDelete">批量删除</DangerButton>
     </div>
     <div class="todo-input-row">
       <input v-model="input" @keyup.enter="addTodo" class="todo-input" placeholder="添加新任务..." />
@@ -36,7 +50,7 @@
           {{ cat.label }}
         </option>
       </select>
-      <button class="todo-add-btn" @click="addTodo">添加</button>
+      <DangerButton type="gradient-green" class="todo-add-btn" @click="addTodo">添加</DangerButton>
     </div>
     <ul class="todo-list">
       <li v-for="(todo, idx) in filteredTodos" :key="todo.id"
@@ -95,6 +109,8 @@ const selectedIds = ref([]);
 const draggingId = ref(null);
 const dragOverIdx = ref(null);
 const dragFromIdx = ref(null);
+const draggingOverCategory = ref(null); // 新增：当前拖拽悬停的分类
+const isDraggingTodo = computed(() => draggingId.value !== null); // 是否正在拖动任务
 const categories = [
   { value: 'main', label: '主线', color: '#ff4d4f' },
   { value: 'branch', label: '支线', color: '#52c41a' },
@@ -162,6 +178,20 @@ function onDragOver(todo, idx, e) {
   dragOverIdx.value = idx;
 }
 function onDrop(todo, idx, e) {
+  // 如果当前悬停在分类圆点上，优先处理分类变更
+  if (draggingOverCategory.value) {
+    // 找到拖动的 todo
+    const todoItem = props.todos.find(t => t.id === draggingId.value);
+    if (todoItem && todoItem.category !== draggingOverCategory.value) {
+      emit('update', { ...todoItem, category: draggingOverCategory.value });
+    }
+    draggingId.value = null;
+    draggingOverCategory.value = null;
+    dragOverIdx.value = null;
+    dragFromIdx.value = null;
+    return;
+  }
+  // 否则走原有排序逻辑
   if (draggingId.value == null || dragOverIdx.value == null) return;
   const fromIdx = filteredTodos.value.findIndex(t => t.id === draggingId.value);
   const toIdx = dragOverIdx.value;
@@ -177,6 +207,29 @@ function onDrop(todo, idx, e) {
 }
 function onDragEnd() {
   draggingId.value = null;
+  dragOverIdx.value = null;
+  dragFromIdx.value = null;
+  draggingOverCategory.value = null;
+}
+// 新增：分类圆点拖拽事件
+function onCategoryDragOver(cat) {
+  if (!isDraggingTodo.value) return;
+  draggingOverCategory.value = cat.value;
+}
+function onCategoryDragLeave(cat) {
+  if (draggingOverCategory.value === cat.value) {
+    draggingOverCategory.value = null;
+  }
+}
+function onCategoryDrop(cat) {
+  if (!isDraggingTodo.value) return;
+  // 找到拖动的 todo
+  const todoItem = props.todos.find(t => t.id === draggingId.value);
+  if (todoItem && todoItem.category !== cat.value) {
+    emit('update', { ...todoItem, category: cat.value });
+  }
+  draggingId.value = null;
+  draggingOverCategory.value = null;
   dragOverIdx.value = null;
   dragFromIdx.value = null;
 }
@@ -253,16 +306,7 @@ function handleReorderTodo(newList) {
   margin-right: auto;
 }
 .todo-batch-del-btn {
-  background: #fff;
-  color: #f56c6c;
-  border: 1.5px solid #f56c6c;
-  border-radius: 8px;
-  padding: 7px 16px;
-  font-size: 0.98rem;
-  font-weight: 500;
-  cursor: pointer;
-  margin-left: 12px;
-  transition: background 0.18s, color 0.18s, border 0.18s;
+ 
 }
 .todo-batch-del-btn:disabled {
   opacity: 0.5;
@@ -294,19 +338,9 @@ function handleReorderTodo(newList) {
   box-shadow: 0 4px 16px rgba(60,60,60,0.13);
 }
 .todo-add-btn {
-  background: #5371f7;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 10px 22px;
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: background 0.18s, box-shadow 0.18s;
-  box-shadow: 0 1px 4px rgba(60,60,60,0.06);
+
 }
 .todo-add-btn:hover {
-  background: #4159c7;
   box-shadow: 0 4px 16px rgba(60,60,60,0.13);
 }
 .todo-list {
@@ -559,4 +593,9 @@ function handleReorderTodo(newList) {
 .todo-category-select option[value="pending"] {
   background-image: radial-gradient(circle, #faad14 6px, transparent 7px);
 }
+.todo-category-tabs.dragging .todo-category-dot-tab {
+  transform: scale(1.5);
+  z-index: 10;
+}
+
 </style> 

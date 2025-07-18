@@ -7,7 +7,13 @@
 
         <!-- 用户基本信息 -->
         <div class="user-header">
-          <el-avatar :size="60" :src="user.avatar" />
+          <el-image
+            :src="user.avatar"
+            :preview-src-list="[user.avatar]"
+            :initial-index="0"
+            fit="cover"
+            style="width: 60px; height: 60px; border-radius: 50%;"
+          />
           <div class="user-info">
             <div class="user-name-level">
               <h3>{{ user.name }}</h3>
@@ -24,7 +30,7 @@
 
         <!-- 操作按钮 -->
         <div class="user-actions" v-if="!hideAddFriend && !hideStartChat">
-          <el-button 
+          <DangerButton 
             v-if="!user.isFriend && !hideAddFriend" 
             type="primary" 
             @click="handleAddFriend"
@@ -33,16 +39,18 @@
           >
             <el-icon><Plus /></el-icon>
             添加好友
-          </el-button>
+          </DangerButton>
+       
           <DangerButton 
             v-else-if="user.isFriend && !hideStartChat" 
-            type="primary" 
+            type="gradient-green" 
             @click="handleStartChat"
             class="action-button"
           >
             <el-icon><ChatDotRound /></el-icon>
             开始聊天
           </DangerButton>
+          
         </div>
 
         <!-- 用户详细信息 -->
@@ -251,8 +259,6 @@ onUnmounted(() => {
   width: 100%;
   justify-content: center;
   gap: 8px;
-  background: var(--primary-color);
-  border-color: var(--primary-color);
 }
 
 .action-button:hover {
@@ -301,44 +307,5 @@ onUnmounted(() => {
   }
 }
 
-/* 暗色模式适配 */
-:deep(.dark-mode) .user-detail-popup {
-  background: var(--dark-sidebar-bg);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  border-color: var(--dark-border);
-}
 
-:deep(.dark-mode) .user-detail-content {
-  background: var(--dark-sidebar-bg);
-}
-
-:deep(.dark-mode) .user-name-level h3 {
-  color: var(--dark-text);
-}
-
-:deep(.dark-mode) .user-status {
-  color: var(--dark-secondary-text);
-}
-
-:deep(.dark-mode) .user-details {
-  border-top-color: var(--dark-border);
-}
-
-:deep(.dark-mode) .detail-item .label {
-  color: var(--dark-secondary-text);
-}
-
-:deep(.dark-mode) .detail-item .value {
-  color: var(--dark-text);
-}
-
-:deep(.dark-mode) .action-button {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-:deep(.dark-mode) .action-button:hover {
-  background: var(--primary-color-hover);
-  border-color: var(--primary-color-hover);
-}
 </style> 

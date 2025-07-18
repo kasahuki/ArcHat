@@ -17,7 +17,7 @@
   --info-color: #909399;
   
   --bg-color: #f5f7fa;
-  --sidebar-bg: #ffffff;
+  --sidebar-bg: #fffbe6;;
   --text-color: #000000;
   --text-color-secondary: #606266;
   --border-color: #DCDFE6;
@@ -169,7 +169,7 @@
 }
 
 /* 通用文本样式 */
-h1, h2, h3, h4, h5, h6, p, span {
+h1, h2, h3, h4, h5, h6, p,li,strong,span {
   color: var(--text-color);
   transition: color var(--transition-duration) ease;
 }

@@ -6,14 +6,16 @@
   --info-color: #909399;
   
   --light-bg: #f5f7fa;
-  --light-sidebar-bg: #ffffff;
+  --light-sidebar-bg: rgba(255, 255, 255, 0.7);
+  --light-sidebar-blur: 18px;
   --light-text: #303133;
   --light-secondary-text: #606266;
   --light-border: #DCDFE6;
   --light-hover: #f5f7fa;
   
   --dark-bg: #1a1d2d;
-  --dark-sidebar-bg: #141824;
+  --dark-sidebar-bg: linear-gradient(135deg, rgba(27, 28, 31, 0.85) 0%, rgba(37, 45, 77, 0.85) 100%);
+  --dark-sidebar-blur: 18px;
   --dark-text: #E5EAF3;
   --dark-secondary-text: #A3A6AD;
   --dark-border: #414243;
@@ -267,12 +269,12 @@ body {
   margin-bottom: 12px;
   border-radius: 8px;
   cursor: pointer;
-  color: #f38071 !important;
+  color: #64d47c !important;
 }
 
 
 .nav-item.active {
-  background-color: rgb(27, 33, 82);
+  background-color: rgb(24, 79, 116);
   color: white;
 }
 

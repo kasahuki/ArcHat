@@ -1,23 +1,34 @@
 <template>
 <!-- From Uiverse.io by Smit-Prajapati --> 
 <div class="container">
-<div class="search-container">
-  <input 
-    class="input" 
-    type="text"
-    :value="modelValue"
-    @input="$emit('update:modelValue', $event.target.value)"
-    @keydown="$emit('keydown', $event)"
-    :placeholder="placeholder"
-    :disabled="disabled"
-  >
-  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Iconoir by Luca Burgio - https://github.com/iconoir-icons/iconoir/blob/main/LICENSE --><path fill="currentColor" fill-rule="evenodd" d="M1.846 7.151a.75.75 0 0 0-.228 1.376l6.517 3.915l6.22-4.355a.75.75 0 0 1 .86 1.229l-6.22 4.355l1.45 7.463a.75.75 0 0 0 1.372.256L22.792 3.94a.75.75 0 0 0-.793-1.133z" clip-rule="evenodd"/></svg>
-</div>
+  <div class="search-container">
+    <textarea 
+      class="input" 
+      :value="modelValue"
+      @input="handleInput"
+      @keydown="handleKeydown"
+      :placeholder="placeholder"
+      :disabled="disabled"
+      ref="textareaRef"
+      rows="1"
+    ></textarea>
+    <svg 
+      xmlns="http://www.w3.org/2000/svg" 
+      width="32" 
+      height="32" 
+      viewBox="0 0 24 24"
+      @click="handleSend"
+      class="send-icon"
+    >
+      <path fill="currentColor" fill-rule="evenodd" d="M1.846 7.151a.75.75 0 0 0-.228 1.376l6.517 3.915l6.22-4.355a.75.75 0 0 1 .86 1.229l-6.22 4.355l1.45 7.463a.75.75 0 0 0 1.372.256L22.792 3.94a.75.75 0 0 0-.793-1.133z" clip-rule="evenodd"/>
+    </svg>
+  </div>
 </div>
 </template>
 
 <script setup>
-defineProps({
+import { ref, onMounted, watch, nextTick } from 'vue'
+const props = defineProps({
   modelValue: {
     type: String,
     default: ''
@@ -31,8 +42,48 @@ defineProps({
     default: false
   }
 })
+const emit = defineEmits(['update:modelValue', 'keydown', 'input', 'send'])
+const textareaRef = ref(null)
 
-defineEmits(['update:modelValue', 'keydown', 'input'])
+const handleInput = (event) => {
+  const value = event.target.value
+  emit('update:modelValue', value)
+  adjustHeight()
+}
+
+const handleKeydown = (event) => {
+  emit('keydown', event)
+  // Enter发送，Shift+Enter换行
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault()
+    handleSend()
+  }
+}
+
+const handleSend = () => {
+  if (!props.disabled && props.modelValue.trim()) {
+    emit('send')
+  }
+}
+
+const adjustHeight = () => {
+  if (textareaRef.value) {
+    textareaRef.value.style.height = 'auto'
+    const scrollHeight = textareaRef.value.scrollHeight
+    const maxHeight = 320
+    textareaRef.value.style.height = Math.min(scrollHeight, maxHeight) + 'px'
+  }
+}
+
+watch(() => props.modelValue, () => {
+  nextTick(() => {
+    adjustHeight()
+  })
+})
+
+onMounted(() => {
+  adjustHeight()
+})
 </script>
 
 <style scoped>
@@ -43,7 +94,7 @@ defineEmits(['update:modelValue', 'keydown', 'input'])
   display: grid;
   z-index: 0;
   width: 100%;
-  height:65px;
+  min-height: 65px;
   margin: 0;
 }
 
@@ -54,10 +105,11 @@ defineEmits(['update:modelValue', 'keydown', 'input'])
   background: rgba(255, 255, 255, 0.1);
   padding: 5px;
   display: flex;
-  align-items: center;
+  align-items: center;   /* 让按钮和 textarea 垂直居中 */
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  min-height: 55px;
 }
 
 .search-container::after, .search-container::before {
@@ -85,7 +137,7 @@ defineEmits(['update:modelValue', 'keydown', 'input'])
 }
 
 .input {
-  padding: 10px;
+  padding: 10px 15px;
   width: 100%;
   background: rgba(255, 255, 255, 0.1);
   border: none;
@@ -95,6 +147,12 @@ defineEmits(['update:modelValue', 'keydown', 'input'])
   transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  resize: none;
+  overflow-y: auto;
+  min-height: 20px;
+  max-height: 320px;
+  line-height: 1.4;
+  font-family: inherit;
 }
 
 .input:focus {
@@ -186,26 +244,52 @@ defineEmits(['update:modelValue', 'keydown', 'input'])
   fill: var(--el-color-primary);
 }
 
-svg {
+:root[data-theme='dark'] .send-icon {
+  stroke: var(--el-color-primary);
+  fill: var(--el-color-primary);
+}
+
+:root[data-theme='dark'] .send-icon:hover {
+  stroke: var(--el-color-primary-light-3);
+  fill: var(--el-color-primary-light-3);
+}
+
+.send-icon {
   width: 38px;
   height: 38px;
   margin-right: 10px;
   cursor: pointer;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
   stroke: #9EBCD9;
   stroke-width: 2;
+  fill: #9EBCD9;
 }
 
-svg:hover {
+.send-icon:hover {
   transform: scale(1.1);
   stroke: #4F9CE8;
+  fill: #4F9CE8;
 }
 
-:root[data-theme='dark'] svg {
-  stroke: var(--el-color-primary);
+.send-icon:active {
+  transform: scale(0.95);
 }
 
-:root[data-theme='dark'] svg:hover {
-  stroke: var(--el-color-primary-light-3);
+/* 自定义滚动条样式 */
+.input::-webkit-scrollbar {
+  width: 6px;
+}
+
+.input::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.input::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.3);
+  border-radius: 3px;
+}
+
+.input::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.5);
 }
 </style>

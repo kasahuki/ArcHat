@@ -1,7 +1,41 @@
 <template>
   <div class="form-container">
+    <!-- SVG 背景装饰 左下 -->
+    <div class="login-svg-bg">
+      <svg width="420" height="320" viewBox="0 0 420 320" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="210" cy="320" rx="210" ry="100" fill="url(#paint0_linear)"/>
+        <circle cx="60" cy="260" r="40" fill="url(#paint1_radial)"/>
+        <defs>
+          <linearGradient id="paint0_linear" x1="0" y1="320" x2="420" y2="320" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#409EFF"/>
+            <stop offset="1" stop-color="#1AAD19"/>
+          </linearGradient>
+          <radialGradient id="paint1_radial" cx="0" cy="0" r="1" gradientTransform="translate(60 260) scale(40)" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#7ed957"/>
+            <stop offset="1" stop-color="#409EFF" stop-opacity="0.2"/>
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
+    <!-- SVG 背景装饰 右上 -->
+    <div class="login-svg-bg-right">
+      <svg width="340" height="260" viewBox="0 0 340 260" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <ellipse cx="170" cy="-40" rx="170" ry="100" fill="url(#paint0_linear_right)"/>
+        <circle cx="300" cy="60" r="30" fill="url(#paint1_radial_right)"/>
+        <defs>
+          <linearGradient id="paint0_linear_right" x1="0" y1="0" x2="340" y2="0" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#eafff3"/>
+            <stop offset="1" stop-color="#b3e5fc"/>
+          </linearGradient>
+          <radialGradient id="paint1_radial_right" cx="0" cy="0" r="1" gradientTransform="translate(300 60) scale(30)" gradientUnits="userSpaceOnUse">
+            <stop stop-color="#409EFF"/>
+            <stop offset="1" stop-color="#1AAD19" stop-opacity="0.18"/>
+          </radialGradient>
+        </defs>
+      </svg>
+    </div>
     <!-- 添加 logo -->
-    <div class="logo">
+    <div class="logo" @click="goToChat">
       <img src="/src/assets/image/archat.png" alt="ARCHAT" />
     </div>
     
@@ -9,11 +43,11 @@
       <!-- Left Panel (Welcome/Register) -->
       <div class="panel welcome-panel" :class="{ 'panel-right': showRegister }">
         <div class="panel-content">
-          <h1 class="welcome-title" style="color: cyan;">{{ showRegister ? 'Welcome Back!' : 'Hello, Welcome!' }}</h1>
+          <h1 class="welcome-title" style="color: #409EFF;">{{ showRegister ? 'Welcome Back!' : 'Hello, Welcome!' }}</h1>
           <p class="welcome-text">{{ showRegister ? 'Already have an account?' : 'Don\'t have an account?' }}</p>
-          <el-button class="action-button" @click="toggleForm">
+          <DangerButton type="success" class="action-button" @click="toggleForm">
             <span style="color: white;">{{ showRegister ? 'Login' : 'Register' }}</span>
-          </el-button>
+          </DangerButton>
         </div>
       </div>
 
@@ -24,7 +58,7 @@
 
           <!-- Login Form -->
           <div v-if="!showRegister" class="form">
-            <el-form :model="loginForm" ref="loginFormRef">
+            <el-form :model="loginForm" ref="loginFormRef" @submit.prevent>
               <el-form-item prop="username">
                 <el-input v-model="loginForm.username" placeholder="Username" :prefix-icon="User" />
               </el-form-item>
@@ -37,9 +71,9 @@
                 <a href="#">Forgot password?</a>
               </div>
 
-              <el-button type="primary" class="submit-button" @click="handleLogin">
-                <span style="color: white;">Login</span>
-              </el-button>
+              <DangerButton type="primary" class="submit-button" @click="handleLogin">
+                <span style="color: white!important;">Login</span>
+              </DangerButton>
 
 
             </el-form>
@@ -47,7 +81,7 @@
 
           <!-- Register Form -->
           <div v-else class="form">
-            <el-form :model="registerForm" ref="registerFormRef">
+            <el-form :model="registerForm" ref="registerFormRef" @submit.prevent>
               <el-form-item prop="username">
                 <el-input v-model="registerForm.username" placeholder="username" :prefix-icon="User" />
               </el-form-item>
@@ -61,9 +95,9 @@
                   :prefix-icon="Lock" />
               </el-form-item>
 
-              <el-button type="primary" class="submit-button" @click="handleRegister">
+              <DangerButton type="primary" class="submit-button" @click="handleRegister">
                 <span style="color: white;">Register</span>
-              </el-button>
+              </DangerButton>
             </el-form>
           </div>
         </div>
@@ -79,6 +113,7 @@ import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { registerService, loginService } from '@/api/user'
 import { useUserInfoStore } from '@/stores/user'
+import DangerButton from '@/components/dangerButton.vue'
 
 // State
 const showRegister = ref(false)
@@ -174,6 +209,11 @@ const handleRegister = async () => {
     console.error('注册错误:', error)
   }
 }
+
+// 回到首页方法
+const goToChat = () => {
+  router.push('/chat')
+}
 </script>
 
 <style scoped>
@@ -182,12 +222,34 @@ const handleRegister = async () => {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background-color: #f0f2f5;
   font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background-image: url("/src/assets/image/login.png");
-  background-size: cover;
-  background-position: center;
+  /* 左右双色渐变背景：左蓝右绿 */
+  background: linear-gradient(120deg, #e3f0ff 0%, #b3e5fc 40%, #eafff3 100%);
   position: relative;
+  overflow: hidden;
+}
+
+.login-svg-bg {
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  z-index: 1;
+  width: 420px;
+  height: 320px;
+  pointer-events: none;
+  opacity: 0.92;
+}
+
+/* 新增右侧渐变装饰 */
+.login-svg-bg-right {
+  position: absolute;
+  right: 0;
+  top: 0;
+  z-index: 1;
+  width: 340px;
+  height: 260px;
+  pointer-events: none;
+  opacity: 0.85;
 }
 
 /* 添加 logo 样式 */
@@ -196,21 +258,37 @@ const handleRegister = async () => {
   top: 30px;
   left: 30px;
   z-index: 10;
+
+
 }
+
 
 .logo img {
   height: 80px;
   width: auto;
+  cursor: pointer;
   filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+  transition: all 0.3s ease;
 }
-
+.logo img:hover {
+  transform: scale(1.05);
+}
 .form-wrapper {
   position: relative;
-  width: 900px;
+  width:950px;
   height: 550px;
-  border-radius: 20px;
+  border-radius: 25px;
   overflow: hidden;
   display: flex;
+  background: #fff;
+  /* 3D立体效果：多层阴影+微透视 */
+  box-shadow:
+    0 8px 32px 0 rgba(31, 38, 135, 0.10),
+    0 1.5px 8px 0 rgba(64, 158, 255, 0.08),
+    0 24px 48px 0 rgba(64, 158, 255, 0.10),
+    0 1.5px 32px 0 rgba(30, 41, 88, 0.10);
+
+  transition: box-shadow 0.4s, transform 0.4s;
 }
 
 .panel {
@@ -224,40 +302,39 @@ const handleRegister = async () => {
 }
 
 .welcome-panel {
-  background: rgba(9, 75, 207, 0.7);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  color: white;
+  /* register 左侧绿色渐变 */
+  background: linear-gradient(135deg, #eafff3 0%, #7ed957 100%);
+  color: #222;
   border-top-left-radius: 20px;
   border-bottom-left-radius: 20px;
   transform: translateX(0);
-  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-right: 1px solid #f0f2f5;
+  transition: background 0.5s;
 }
 
 .form-panel {
-  background: rgba(30, 41, 88, 0.7);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
+  /* login 右侧蓝色渐变 */
   border-top-right-radius: 20px;
   border-bottom-right-radius: 20px;
   transform: translateX(0);
-  border-left: 1px solid rgba(197, 187, 187, 0.18);
-
+  border-left: 1px solid #f0f2f5;
+  transition: background 0.5s;
 }
 
-/* 优化切换动画 */
+/* 切换时左右 panel 互换渐变色 */
 .show-register .welcome-panel {
+  background: linear-gradient(135deg, #e3f0ff 0%, #409EFF 100%);
   transform: translateX(100%);
   border-radius: 0 20px 20px 0;
   border-right: none;
-  border-left: 1px solid rgba(255, 255, 255, 0.18);
+  border-left: 1px solid #f0f2f5;
 }
 
 .show-register .form-panel {
   transform: translateX(-100%);
   border-radius: 20px 0 0 20px;
   border-left: none;
-  border-right: 1px solid rgba(255, 255, 255, 0.18);
+  border-right: 1px solid #f0f2f5;
 }
 
 .panel-content {
@@ -270,44 +347,37 @@ const handleRegister = async () => {
 }
 
 .welcome-title {
-  font-size: 2.5rem;
-  margin-bottom: 15px;
-  font-weight: 600;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  font-size: 2.7rem;
+  margin-bottom: 18px;
+  font-weight: 800;
+  letter-spacing: 1.5px;
+  color: #1a8cff;
+  text-shadow: 0 4px 16px rgba(64,158,255,0.10), 0 1.5px 8px 0 rgba(64, 158, 255, 0.08);
 }
 
 .welcome-text {
-  margin-bottom: 30px;
-  font-size: 1rem;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  margin-bottom: 32px;
+  font-size: 1.08rem;
+  color: #3a3a3a;
+  font-weight: 500;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
 }
 
 .form-title {
-  font-size: 2rem;
-  margin-bottom: 30px;
-  color: #ffffff;
-  font-weight: 600;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  font-size: 5.1rem;
+  margin-bottom: 32px;
+  color: #06aa06;
+  font-weight: 800;
+  letter-spacing: 1.2px;
 }
 
 .action-button {
-  background-color: transparent;
-  border: 2px solid rgba(255, 255, 255, 0.8);
-  color: white;
-  padding: 10px 40px;
-  border-radius: 30px;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-}
+  border: none;
+  color: #fff;
+  font-size: 1.08rem;
+  font-weight: 700;
 
-.action-button:hover {
-  background-color: rgba(255, 255, 255, 0.2);
-  color: white;
-  border-color: white;
+  letter-spacing: 1px;
 }
 
 .form {
@@ -315,25 +385,31 @@ const handleRegister = async () => {
 
 }
 
-/* 优化输入框样式 */
+/* 优化输入框样式，让嵌入效果更明显 */
 :deep(.el-input__wrapper) {
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: none;
-  transition: all 0.3s ease;
+  background: #f6faff;
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 12px 0 rgba(204, 204, 204, 0.1) inset, 0 1.5px 8px 0 rgba(64, 158, 255, 0.08) inset;
+  font-size: 1.08rem;
+  font-weight: 600;
+  color: #222;
+  transition: box-shadow 0.3s, background 0.3s;
+  padding: 2px 12px;
 }
 
-:deep(.el-input__wrapper:hover) {
-  background: rgba(255, 255, 255, 0.9);
-  border-color: rgba(102, 152, 255, 0.5);
-}
-
+:deep(.el-input__wrapper:hover),
 :deep(.el-input__wrapper.is-focus) {
-  background: rgba(255, 255, 255, 0.95);
-  border-color: #6698ff;
-  box-shadow: 0 0 0 1px #6698ff;
+  background: #9ff0b1;
+  box-shadow: 0 4px 24px 0 #ebedee inset, 0 2px 16px 0 #409eff22 inset;
+  animation: input-embed-in 0.3s cubic-bezier(.4,0,.2,1);
+}
+
+:deep(.el-input__inner) {
+  color: #222;
+  font-size: 1.08rem;
+  font-weight: 600;
+  letter-spacing: 0.5px;
 }
 
 .forgot-password {
@@ -342,35 +418,25 @@ const handleRegister = async () => {
 }
 
 .forgot-password a {
-  color: rgba(153, 153, 153, 0.8);
-  text-decoration: none;
-  font-size: 0.9rem;
-  transition: all 0.3s ease;
+  color: #409EFF;
+  font-weight: 500;
+  text-decoration: underline dotted;
+  font-size: 0.98rem;
+  transition: color 0.2s;
 }
-
 .forgot-password a:hover {
-  color: #6698ff;
+  color: #1AAD19;
 }
 
 .submit-button {
   width: 100%;
-  padding: 12px;
-  background: rgba(102, 152, 255, 0.8);
-  backdrop-filter: blur(5px);
-  -webkit-backdrop-filter: blur(5px);
   border: none;
-  border-radius: 30px;
-  color: white;
-  font-size: 1rem;
-  font-weight: 600;
-  cursor: pointer;
-  margin-top: 10px;
-  transition: all 0.3s ease;
-}
+  font-size: 1.08rem;
+  font-weight: 700;
 
-.submit-button:hover {
-  background: rgba(102, 152, 255, 0.9);
-  transform: translateY(-2px);
+  margin-top: 12px;
+  letter-spacing: 1px;
+
 }
 
 /* 响应式设计 */
@@ -425,6 +491,14 @@ const handleRegister = async () => {
   
   .logo img {
     height: 32px;
+  }
+  .login-svg-bg {
+    width: 160px;
+    height: 80px;
+  }
+  .login-svg-bg-right {
+    width: 120px;
+    height: 60px;
   }
 }
 </style>

@@ -1,3 +1,5 @@
+import emitter from '@/utils/eventBus';
+
 class ChatWebSocket {
   constructor({ url, token, onMessage, onOpen, onClose, onError }) {
     this.url = url;
@@ -43,15 +45,15 @@ class ChatWebSocket {
         this.startHeartbeat();
         this.startHealthCheck();
         this.onOpen && this.onOpen(event);
+        // 触发连接成功事件，通知GroupChat关闭loading动画
+        emitter.emit('websocket-connected');
       };
 
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          console.log('WebSocket 收到消息:', data);
           if (data.type === 2) { // 心跳响应
             this.lastHeartbeatResponse = Date.now();
-            console.log('收到心跳响应，更新时间戳:', this.lastHeartbeatResponse);
           }
           this.onMessage && this.onMessage(event);
         } catch (error) {
@@ -79,11 +81,8 @@ class ChatWebSocket {
           console.log('准备重连...');
           this.reconnect();
         } else {
-          console.log('不进行重连:', {
-            isLoggedOut: this.isLoggedOut,
-            code: event.code,
-            reason: event.reason
-          });
+          //  手动触发重连 显示重连弹窗
+          emitter.emit('websocket-reconnect');
         }
       };
 

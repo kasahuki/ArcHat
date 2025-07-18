@@ -47,7 +47,7 @@ instance.interceptors.response.use(
 
         //操作失败
         // alert(result.data.msg?result.data.msg:'服务异常')
-        ElMessage.error(result.data.msg?result.data.msg:'服务异常')
+        ElMessage.error(result.data.msg?result.data.msg:'服务异常！！！！')
         console.log(result)
 
         //异步操作的状态转换为失败
@@ -55,15 +55,17 @@ instance.interceptors.response.use(
         
     },
     err => {
-        //判断响应状态码,如果为401,则证明未登录,提示请登录,并跳转到登录页面
-        if(err.response.status===401){
-            ElMessage.error('请先登录')
-            router.push('/login')
-        }else if(err.response.status===404) {
+        // 判断响应状态码,如果为401,则证明未登录,提示请登录,并跳转到登录页面
+        if (err.response.status === 401) {
+            // 如果当前界面在 /chat 就不要跳转到 login
+            if (router.currentRoute.value.path !== '/chat') {
+                router.push('/login')
+            }
+        } else if (err.response.status === 404) {
             router.push('/404NotFound')
         }
         else{
-            ElMessage.error('服务异常')
+            ElMessage.error('服务异常！！！')
         }
        
         return Promise.reject(err);//异步的状态转化成失败的状态 

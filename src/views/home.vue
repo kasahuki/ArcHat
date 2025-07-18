@@ -2,33 +2,32 @@
   <div class="app-container" :class="{ 'dark-mode': isDarkMode }">
     <div class="background-overlay"></div>
     <el-container class="app-layout">
-      
-      <!-- 第一部分：图标栏 -->
+
+      <!-- #region 图标栏 -->
       <el-aside width="64px" class="icon-bar">
         <!-- 折叠/展开按钮 -->
-        <div 
-          class="sidebar-toggle-btn"
-          @click="isSidebarCollapse = !isSidebarCollapse"
-          :class="{ 'collapsed': isSidebarCollapse }"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 48 48">
-            <path fill="#2E7D32" d="M6 22h4v4H6zm0-8h4v4H6zm0 16h4v4H6zm0 32h4v4H6zm8-16h28v4H14zm0-8h28v4H14zm0 16h28v4H14zm0-24h28v4H14z"/>
+
+        <div class="sidebar-toggle-btn" @click="isSidebarCollapse = !isSidebarCollapse"
+          :class="{ 'collapsed': isSidebarCollapse }">
+          <svg v-if="!isSidebarCollapse" xmlns="http://www.w3.org/2000/svg" width="30" viewBox="0 0 24 24">
+            <!-- Icon: Arrow Left -->
+            <path fill="currentColor"
+              d="M6.325 12.85q-.225-.15-.337-.375T5.874 12t.113-.475t.337-.375l8.15-5.175q.125-.075.263-.112T15 5.825q.4 0 .7.288t.3.712v10.35q0 .425-.3.713t-.7.287q-.125 0-.262-.038t-.263-.112z" />
+          </svg>
+          <svg v-else xmlns="http://www.w3.org/2000/svg" width="30" viewBox="0 0 24 24"
+            style="transform: rotate(180deg);">
+            <!-- Icon: Arrow Right (flipped) -->
+            <path fill="currentColor"
+              d="M6.325 12.85q-.225-.15-.337-.375T5.874 12t.113-.475t.337-.375l8.15-5.175q.125-.075.263-.112T15 5.825q.4 0 .7.288t.3.712v10.35q0 .425-.3.713t-.7.287q-.125 0-.262-.038t-.263-.112z" />
           </svg>
         </div>
-        
         <!-- 添加用户头像 -->
-        <div class="user-avatar-container" @click="handleIconClick('user', '/UserHub')">
+        <div class="user-avatar-container" @click="router.push('/userHub')">
           <el-avatar :size="40" :src="userInfo.avatar"></el-avatar>
         </div>
-        
         <div class="sidebar-nav">
-          <div 
-            v-for="(menu, key) in MENU_CONFIG" 
-            :key="key"
-            class="nav-item" 
-            :class="{ active: activeIcon === menu.icon }"
-            @click="handleMenuClick(menu)"
-          >
+          <div v-for="(menu, key) in MENU_CONFIG" :key="key" class="nav-item"
+            :class="{ active: activeIcon === menu.icon }" @click="handleMenuClick(menu)">
             <el-badge v-if="menu.badge" :value="menu.badge" class="nav-badge">
               <el-icon>
                 <component :is="getIconComponent(menu.icon)" />
@@ -40,70 +39,64 @@
           </div>
         </div>
       </el-aside>
-      <!-- 第二部分：会话列表 -->
-      <el-aside
-        :class="['sidebar', { collapsed: isSidebarCollapse }]"
-      >
+      <!-- #endregion -->
+
+      <!-- #region 会话列表 -->
+      <el-aside :class="['sidebar', { collapsed: isSidebarCollapse }]">
         <div class="sidebar-header" v-if="!isSidebarCollapse">
-          <h2 class="inbox-title"> <a href=""><img src="/src/assets/image/archat.png" alt="" width="50px"></a>ArcHat</h2>
-          <el-button type="text" class="collapse-btn" @click="isSidebarCollapse = true">
-            <el-icon><ArrowLeft /></el-icon>
-          </el-button>
+          <h2 class="inbox-title"> <a href=""><img src="/src/assets/image/archat.png" alt="" width="50px"></a>ArcHat
+          </h2>
+          <div class="visitor-tag"><el-icon>
+              <UserFilled />
+            </el-icon> 今日访客：{{ visitorCount }}</div>
         </div>
         <div v-if="!isSidebarCollapse" class="search-container">
-          <el-input
-            placeholder="Find a conversation"
-            v-model="searchQuery"
-            clearable
-            class="custom-search-input"
-          >
+          <el-input placeholder="Find a conversation" v-model="searchQuery" clearable class="custom-search-input">
             <template #prefix>
-              <el-icon><Search /></el-icon>
+              <el-icon>
+                <Search />
+              </el-icon>
             </template>
             <template #suffix>
-              <el-icon class="search-send-icon"><Position /></el-icon>
+              <el-icon class="search-send-icon">
+                <Position />
+              </el-icon>
             </template>
           </el-input>
         </div>
         <div v-if="!isSidebarCollapse" class="switch-container">
           <div class="switch-bar">
-            <button 
-              class="switch-btn" 
-              :class="{ active: currentView === 'friends' }"
-              @click="currentView = 'friends'"
-              data-tooltip="好友列表"
-            >
-              <el-icon><User /></el-icon>
+            <button class="switch-btn" :class="{ active: currentView === 'friends' }" @click="currentView = 'friends'"
+              data-tooltip="好友列表">
+              <el-icon>
+                <User />
+              </el-icon>
             </button>
-            <button 
-              class="switch-btn" 
-              :class="{ active: currentView === 'groups' }"
-              @click="currentView = 'groups'"
-              data-tooltip="群组列表"
-            >
-            <svg xmlns="http://www.w3.org/2000/svg" width="32" height="22" viewBox="0 0 1200 1200"><!-- Icon from Elusive Icons by Team Redux - https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL --><path fill="currentColor" d="M596.847 188.488c-103.344 0-187.12 97.81-187.12 218.465c0 83.678 40.296 156.352 99.468 193.047l-68.617 31.801l-182.599 84.688c-17.64 8.821-26.444 23.778-26.444 44.947v201.102c1.451 25.143 16.537 48.577 40.996 48.974h649.62c27.924-2.428 42.05-24.92 42.325-48.974V761.436c0-21.169-8.804-36.126-26.443-44.947l-175.988-84.688l-73.138-34.65c56.744-37.521 95.061-108.624 95.061-190.197c-.001-120.656-83.778-218.466-187.121-218.466m-301.824 76.824c-44.473 1.689-79.719 20.933-106.497 51.596c-29.62 36.918-44.06 80.75-44.339 124.354c1.819 64.478 30.669 125.518 82.029 157.446L21.163 693.997C7.05 699.289 0 711.636 0 731.041v161.398c1.102 21.405 12.216 39.395 33.055 39.703h136.284V761.436c2.255-45.639 23.687-82.529 62.196-100.531l136.247-64.817c10.584-6.175 20.731-14.568 30.433-25.152c-56.176-86.676-63.977-190.491-27.773-281.801c-23.547-14.411-50.01-23.672-75.419-23.823m608.586 0c-29.083.609-55.96 11.319-78.039 26.444c35.217 92.137 25.503 196.016-26.482 276.52c11.467 13.23 23.404 23.377 35.753 30.434l130.965 62.195c39.897 21.881 60.47 59.098 60.866 100.532v170.707h140.235c23.063-1.991 32.893-20.387 33.093-39.704V731.042c0-17.641-7.05-29.987-21.163-37.045l-202.431-96.618c52.498-38.708 78.859-96.72 79.369-156.117c-1.396-47.012-15.757-90.664-44.339-124.354c-29.866-32.399-66.91-51.253-107.827-51.596"/></svg>
+            <button class="switch-btn" :class="{ active: currentView === 'groups' }" @click="currentView = 'groups'"
+              data-tooltip="群组列表">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="22"
+                viewBox="0 0 1200 1200"><!-- Icon from Elusive Icons by Team Redux - https://scripts.sil.org/cms/scripts/page.php?site_id=nrsi&id=OFL -->
+                <path fill="currentColor"
+                  d="M596.847 188.488c-103.344 0-187.12 97.81-187.12 218.465c0 83.678 40.296 156.352 99.468 193.047l-68.617 31.801l-182.599 84.688c-17.64 8.821-26.444 23.778-26.444 44.947v201.102c1.451 25.143 16.537 48.577 40.996 48.974h649.62c27.924-2.428 42.05-24.92 42.325-48.974V761.436c0-21.169-8.804-36.126-26.443-44.947l-175.988-84.688l-73.138-34.65c56.744-37.521 95.061-108.624 95.061-190.197c-.001-120.656-83.778-218.466-187.121-218.466m-301.824 76.824c-44.473 1.689-79.719 20.933-106.497 51.596c-29.62 36.918-44.06 80.75-44.339 124.354c1.819 64.478 30.669 125.518 82.029 157.446L21.163 693.997C7.05 699.289 0 711.636 0 731.041v161.398c1.102 21.405 12.216 39.395 33.055 39.703h136.284V761.436c2.255-45.639 23.687-82.529 62.196-100.531l136.247-64.817c10.584-6.175 20.731-14.568 30.433-25.152c-56.176-86.676-63.977-190.491-27.773-281.801c-23.547-14.411-50.01-23.672-75.419-23.823m608.586 0c-29.083.609-55.96 11.319-78.039 26.444c35.217 92.137 25.503 196.016-26.482 276.52c11.467 13.23 23.404 23.377 35.753 30.434l130.965 62.195c39.897 21.881 60.47 59.098 60.866 100.532v170.707h140.235c23.063-1.991 32.893-20.387 33.093-39.704V731.042c0-17.641-7.05-29.987-21.163-37.045l-202.431-96.618c52.498-38.708 78.859-96.72 79.369-156.117c-1.396-47.012-15.757-90.664-44.339-124.354c-29.866-32.399-66.91-51.253-107.827-51.596" />
+              </svg>
             </button>
           </div>
         </div>
         <div v-if="!isSidebarCollapse" class="conversation-list">
           <template v-if="currentView === 'friends'">
-            <div
-              class="scroll-wrapper"
-              v-infinite-scroll="loadMore"
-              :infinite-scroll-disabled="isLoading || noMoreData"
-              :infinite-scroll-distance="20"
-              style="height: 100%; overflow-y: auto;"
-            >
+            <div class="scroll-wrapper" v-infinite-scroll="loadMoreFriends"
+              :infinite-scroll-disabled="isLoading || noMoreData" :infinite-scroll-distance="20"
+              style="height: 100%; overflow-y: auto;">
               <template v-if="filteredContacts.length > 0">
-                <div 
-                  v-for="contact in filteredContacts" 
-                  :key="contact.id" 
-                  class="conversation-item"
-                  :class="{ 'active': route.params.id === contact.id.toString() }"
-                  @click="handleChat(contact)"
-                >
+                <div v-for="contact in filteredContacts" :key="contact.id" class="conversation-item" :class="{
+                  'active': route.params.id === contact.id.toString(),
+                  'has-unread': contact.unreadCount > 0
+                }" @click="handleChat(contact)">
+                  <el-badge v-if="contact.unreadCount > 0" :value="contact.unreadCount" class="item-unread-badge"
+                    type="danger" :max="99" style="--el-badge-bg-color: #f56c6c;" />
                   <div class="conversation-avatar">
-                    <el-avatar :size="40" :src="contact.avatar"></el-avatar>
+                    <el-avatar :size="40" :src="contact.avatar"
+                      :class="{ 'avatar-offline': !contact.status }"></el-avatar>
                     <div class="online-status" :class="{ 'online': contact.status }">
                       <span class="status-dot"></span>
                     </div>
@@ -111,50 +104,56 @@
                   <div class="conversation-content">
                     <div class="conversation-header">
                       <span class="company-name">{{ contact.username }}</span>
-                      <div v-if="contact.readTime && contact.activeTime && new Date(contact.activeTime) > new Date(contact.readTime)" class="message-time">
-                        <span>{{ formatMessageTime(contact.activeTime) }}</span>
+                      <div class="message-time">
+                        <span v-if="contact.unreadCount === 0 && contact.activeTime">{{
+                          formatMessageTime(contact.activeTime) }}</span>
                       </div>
                     </div>
                     <div class="message-preview">
-                      {{ contact.lastMsgId ? (messagePreviews.get(contact.id) || '加载中...') : '暂无消息' }}
+                      <template v-if="contact.lastMsgId">
+                        <template v-if="messagePreviews.get(contact.id)">
+                          {{ getSenderName(contact) }}: {{ messagePreviews.get(contact.id) }}
+                        </template>
+                        <template v-else>加载中...</template>
+                      </template>
+                      <template v-else>暂无消息</template>
                     </div>
                   </div>
                 </div>
               </template>
               <div v-else-if="searchQuery" class="empty-conversation">
                 <div class="empty-content">
-                  <el-icon class="empty-icon"><Search /></el-icon>
+                  <el-icon class="empty-icon">
+                    <Search />
+                  </el-icon>
                   <h3>未找到相关联系人</h3>
                   <p>换个关键词试试吧</p>
                 </div>
               </div>
               <div v-else class="empty-conversation">
                 <div class="empty-content">
-                  <el-icon class="empty-icon"><ChatDotRound /></el-icon>
+                  <el-icon class="empty-icon">
+                    <ChatDotRound />
+                  </el-icon>
                   <h3>还没有聊天记录</h3>
                   <p>快去和好友聊天吧</p>
                 </div>
               </div>
               <div v-if="isLoading" style="text-align:center;padding:8px;color:#999;">加载中...</div>
-              <div v-if="noMoreData && filteredContacts.length > 0" style="text-align:center;padding:8px;color:#999;">没有更多了</div>
+              <div v-if="noMoreData && filteredContacts.length > 0" style="text-align:center;padding:8px;color:#999;">
+                没有更多了</div>
             </div>
           </template>
           <template v-else>
-            <div
-              class="scroll-wrapper"
-              v-infinite-scroll="loadMoreGroups"
-              :infinite-scroll-disabled="isLoadingGroups || noMoreGroups"
-              :infinite-scroll-distance="20"
-              style="height: 100%; overflow-y: auto;"
-            >
+            <div class="scroll-wrapper" v-infinite-scroll="loadMoreGroups"
+              :infinite-scroll-disabled="isLoadingGroups || noMoreGroups" :infinite-scroll-distance="20"
+              style="height: 100%; overflow-y: auto;">
               <template v-if="filteredGroups.length > 0">
-                <div 
-                  v-for="group in filteredGroups" 
-                  :key="group.roomId" 
-                  class="conversation-item"
-                  :class="{ 'active': route.params.id === group.roomId?.toString() }"
-                  @click="handleGroupChat(group)"
-                >
+                <div v-for="group in filteredGroups" :key="group.roomId" class="conversation-item"
+                  :class="{ 'active': route.params.id === group.roomId?.toString(), 'has-unread': group.unreadCount > 0 }"
+                  @click="handleGroupChat(group)">
+                  <el-badge v-if="group.unreadCount > 0" :value="group.unreadCount" class="item-unread-badge"
+                    type="danger" :max="99" style="--el-badge-bg-color: #f56c6c;" />
                   <div class="conversation-avatar">
                     <el-avatar :size="40" :src="group.avatar"></el-avatar>
                   </div>
@@ -163,44 +162,58 @@
                       <span class="company-name">{{ group.name }}</span>
                       <span class="timestamp">{{ group.activeTime ? formatMessageTime(group.activeTime) : '' }}</span>
                     </div>
-                    <div class="message-preview">{{ group.lastMsgId ? '有新消息' : '暂无消息' }}</div>
+                    <div class="message-preview">
+                      <template v-if="group.lastMsgId">
+                        <template v-if="groupMessagePreviews.get(group.roomId)">
+                          {{ getGroupSenderName(group) }}: {{ groupMessagePreviews.get(group.roomId) }}
+                        </template>
+                        <template v-else>加载中...</template>
+                      </template>
+                      <template v-else>暂无消息</template>
+                    </div>
                   </div>
                 </div>
               </template>
               <div v-else-if="searchQuery" class="empty-conversation">
                 <div class="empty-content">
-                  <el-icon class="empty-icon"><Search /></el-icon>
+                  <el-icon class="empty-icon">
+                    <Search />
+                  </el-icon>
                   <h3>未找到相关群聊</h3>
                   <p>换个关键词试试吧</p>
                 </div>
               </div>
               <div v-else class="empty-conversation">
                 <div class="empty-content">
-                  <el-icon class="empty-icon"><UserFilled /></el-icon>
+                  <el-icon class="empty-icon">
+                    <UserFilled />
+                  </el-icon>
                   <h3>还没有群聊</h3>
                   <p>创建或加入一个群聊吧</p>
                 </div>
               </div>
               <div v-if="isLoadingGroups" style="text-align:center;padding:8px;color:#999;">加载中...</div>
-              <div v-if="noMoreGroups && filteredGroups.length > 0" style="text-align:center;padding:8px;color:#999;">没有更多了</div>
+              <div v-if="noMoreGroups && filteredGroups.length > 0" style="text-align:center;padding:8px;color:#999;">
+                没有更多了</div>
             </div>
           </template>
         </div>
       </el-aside>
+      <!-- #endregion -->
 
-      <!-- 第三部分：主内容区（只保留默认内容） -->
-      <el-main class="main-content" >
-        <router-view v-slot="{ Component }">
+      <!-- #region 主内容区 -->
+      <el-main class="main-content">
+        <router-view v-slot="{ Component, route }">
           <transition name="fade" mode="out-in">
-            <keep-alive>
-              <component :is="Component" :friend-list="friendList" :group-list="groupList"  />
-            </keep-alive>
+            <component :is="Component" :key="route.fullPath" :friend-list="friendList" :group-list="groupList" />
           </transition>
         </router-view>
       </el-main>
-      <!-- 右上角主题切换按钮和添加按钮 -->
+      <!-- #endregion -->
+
+      <!-- #region 右上角控制按钮 -->
       <div class="theme-toggle-top">
-    
+
         <el-dropdown trigger="click">
           <el-button circle class="apple-menu-btn">
             <div class="apple-dots">
@@ -212,15 +225,21 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="handleShowSearchDialog('friend')">
-                <el-icon><User /></el-icon>
+                <el-icon>
+                  <User />
+                </el-icon>
                 添加好友
               </el-dropdown-item>
               <el-dropdown-item @click="handleShowSearchDialog('group')">
-                <el-icon><UserFilled /></el-icon>
+                <el-icon>
+                  <UserFilled />
+                </el-icon>
                 添加群聊
               </el-dropdown-item>
               <el-dropdown-item @click="handleShowCreateGroupDialog">
-                <el-icon><Plus /></el-icon>
+                <el-icon>
+                  <Plus />
+                </el-icon>
                 创建群聊
               </el-dropdown-item>
             </el-dropdown-menu>
@@ -228,104 +247,98 @@
         </el-dropdown>
 
         <el-button circle class="theme-toggle-btn" @click="toggleTheme" data-tooltip="切换主题">
-          <el-icon v-if="isDarkMode"><Sunny /></el-icon>
-          <el-icon v-else><Moon /></el-icon>
+          <el-icon v-if="isDarkMode">
+            <Sunny />
+          </el-icon>
+          <el-icon v-else>
+            <Moon />
+          </el-icon>
         </el-button>
 
         <div class="mac-window-controls">
           <button class="mac-btn close" @click="handleLogout" data-tooltip="退出登录">
-            <el-icon><Close /></el-icon>
+            <el-icon>
+              <Close />
+            </el-icon>
           </button>
           <button class="mac-btn minimize" @click="handleMinimize" data-tooltip="切换会话列表">
-            <el-icon><Minus /></el-icon>
+            <el-icon>
+              <Minus />
+            </el-icon>
           </button>
           <button class="mac-btn maximize" @click="handleMaximize" data-tooltip="切换导航选项">
-            <el-icon><FullScreen /></el-icon>
+            <el-icon>
+              <FullScreen />
+            </el-icon>
           </button>
         </div>
 
         <!-- 日历签到按钮，放在详情按钮左边，适配日夜模式 -->
-        <el-button
-          circle
-          class="calendar-btn"
-          @click="handleShowSignInCalendar"
-          data-tooltip="每日签到"
-          :style="calendarBtnStyle"
-        >
-          <el-icon><Calendar style="color: #fff;" /></el-icon>
+        <el-button circle class="calendar-btn" @click="handleShowSignInCalendar" data-tooltip="每日签到"
+          :style="calendarBtnStyle">
+          <el-icon>
+            <Calendar style="color: #fff;" />
+          </el-icon>
         </el-button>
       </div>
+      <!-- #endregion -->
     </el-container>
 
+    <!-- #region 弹窗组件 -->
     <!-- 添加全屏搜索弹窗 -->
-    <SearchDialog
-      v-model:visible="showSearchDialog"
-      :initial-type="searchType"
-    />
+    <SearchDialog v-model:visible="showSearchDialog" :initial-type="searchType" />
 
     <!-- 添加创建群聊弹窗 -->
-    <FullScreenDialog
-      v-model:visible="showCreateGroupDialog"
-      title="创建群聊"
-    >
+    <FullScreenDialog v-model:visible="showCreateGroupDialog" title="创建群聊">
       <div class="create-group-content">
         <el-form :model="groupForm" label-width="80px" class="create-group-form">
           <el-form-item label="群名称">
-            <el-input 
-              v-model="groupForm.name" 
-              placeholder="请输入群名称" 
-              class="custom-input"
-              clearable
-            >
+            <el-input v-model="groupForm.name" placeholder="请输入群名称" class="custom-input" clearable>
               <template #suffix>
-                <el-icon class="input-clear-icon" @click="groupForm.name = ''"><Close /></el-icon>
+                <el-icon class="input-clear-icon" @click="groupForm.name = ''">
+                  <Close />
+                </el-icon>
               </template>
             </el-input>
           </el-form-item>
           <el-form-item label="群头像">
-            <el-upload
-              class="avatar-uploader"
-              action="#"
-              :show-file-list="false"
-              :before-upload="beforeAvatarUpload"
-            >
+            <div class="avatar-uploader" @dragover.prevent @drop="handleGroupAvatarDrop"
+              @click="() => $refs.groupAvatarInput.click()" style="cursor:pointer;">
+              <input type="file" accept="image/*" ref="groupAvatarInput" style="display:none"
+                @change="handleGroupAvatarChange" />
               <div class="avatar-wrapper">
-                <img v-if="groupForm.avatar" :src="groupForm.avatar" class="avatar" />
+                <img v-if="groupAvatarPreview" :src="groupAvatarPreview" class="avatar" />
                 <div v-else class="avatar-placeholder">
-                  <el-icon class="avatar-uploader-icon"><Plus /></el-icon>
-                  <span class="upload-text">点击上传群头像</span>
+                  <el-icon class="avatar-uploader-icon">
+                    <Plus />
+                  </el-icon>
+                  <span class="upload-text">上传群头像</span>
                 </div>
               </div>
-            </el-upload>
+
+              <DangerButton type="warning" style="margin-top:12px;" v-if="groupAvatarPreview"
+                @click.stop="handleGroupAvatarRemove">
+                移除
+              </DangerButton>
+
+            </div>
           </el-form-item>
           <el-form-item label="群公告">
-            <el-input
-              v-model="groupForm.announcement"
-              type="textarea"
-              rows="3"
-              placeholder="请输入群公告"
-              class="custom-textarea"
-              clearable
-            >
+            <el-input v-model="groupForm.announcement" type="textarea" rows="3" placeholder="请输入群公告"
+              class="custom-textarea" clearable>
               <template #suffix>
-                <el-icon class="input-clear-icon" @click="groupForm.announcement = ''"><Close /></el-icon>
+                <el-icon class="input-clear-icon" @click="groupForm.announcement = ''">
+                  <Close />
+                </el-icon>
               </template>
             </el-input>
           </el-form-item>
           <el-form-item class="button-group">
-            <el-button 
-              type="primary" 
-              class="create-btn"
-              @click="handleCreateGroup"
-            >
-              <span style="color: white;" >创建</span>
+            <el-button type="primary" class="create-btn" @click="handleCreateGroup">
+              <span style="color: white;">创建</span>
             </el-button>
-            <el-button 
-              type="danger"
-              class="reset-btn"
-              @click="handleResetForm"
-            >
-            <span style="color: white;" >重置</span>
+            <el-button type="danger" class="reset-btn" @click="handleResetForm">
+              <span style="color: white;">重置</span>
             </el-button>
           </el-form-item>
         </el-form>
@@ -333,43 +346,32 @@
     </FullScreenDialog>
 
     <!-- 添加消息通知组件 -->
-    <message-notification
-      ref="messageNotificationRef"
-      :message="notificationMessage"
-      @click="handleNotificationClick"
-    />
+    <message-notification ref="messageNotificationRef" :message="notificationMessage"
+      @click="handleNotificationClick" />
     <FullScreenDialog v-model:visible="showSignInCalendar" title="每日签到">
       <div class="signin-calendar-topbar">
-       
+
       </div>
       <div class="sign-calendar-wrapper">
-      <SignInCalendar
-        v-model="showSignInCalendar"
-        :signed-dates="signedDates"
-          :is-today-signed-in="isTodaySignedIn"
-          :consecutive-days="consecutiveDays"
-          :total-days="totalDays"
-          @sign="handleSignInClick"
-      />
+        <SignInCalendar v-model="showSignInCalendar" :signed-dates="signedDates" :is-today-signed-in="isTodaySignedIn"
+          :consecutive-days="consecutiveDays" :total-days="totalDays" @sign="handleSignInClick" />
       </div>
       <template #footer>
         <el-button @click="showSignInCalendar = false" class="sign-close-btn">关闭</el-button>
       </template>
     </FullScreenDialog>
-    
+
     <!-- ExpDialog经验值弹窗 -->
-    <ExpDialog 
-      v-model:visible="showExpDialog" 
-      :title="expDialogTitle"
-      @close="showExpDialog = false"
-    />
+    <ExpDialog v-model:visible="showExpDialog" :title="expDialogTitle" @close="showExpDialog = false" />
+    <!-- #endregion -->
   </div>
 </template>
 
 <script setup>
+// #region 导入依赖
 import { ref, onMounted, onUnmounted, watch, computed, h, defineComponent } from 'vue';
-import { 
-  ChatDotRound, Setting, Sunny, Moon, 
+import {
+  ChatDotRound, Setting, Sunny, Moon,
   ArrowLeft, Plus, User, UserFilled, Message,
   Close, Minus, FullScreen, Search, Position,
   Calendar, Folder
@@ -378,8 +380,8 @@ import { useRouter, useRoute } from 'vue-router';
 import { ElMessage, ElMessageBox } from 'element-plus';
 import FullScreenDialog from '@/components/FullScreenDialog.vue';
 import SearchDialog from '@/components/SearchDialog.vue';
-import {  getFriendList } from '@/api/friend';
-import { getContactList, getGroupList } from '@/api/contact';
+import { getFriendList } from '@/api/friend';
+import { getContactList, getGroupList, getUnreadMsgCnt } from '@/api/contact';
 import '@/assets/styles/home.css';
 import { logoutService } from '@/api/user';
 import { useUserInfoStore } from '@/stores/user';
@@ -393,11 +395,42 @@ import ExpDialog from '@/components/ExpDialog.vue';
 import { ElInfiniteScroll } from 'element-plus';
 import { addGroupRoom } from '@/api/room';
 import { handleSignIn, getSignInDetail, getSignedDates, checkTodaySignIn, getConsecutiveSignInDays, getTotalSignInDays } from '@/utils/signInHandler';
+import { fetchVisitorCount, callAddVisitorOncePerDay } from '@/api/uv';
+import DangerButton from '@/components/dangerButton.vue';
+import { uploadImageFile } from '@/utils/fileHandler';
+import { loadMoreList } from '@/utils/paginatedListLoader';
+const groupAvatarFile = ref(null);
+const groupAvatarPreview = ref('');
+const groupAvatarInput = ref(null);
 
+function handleGroupAvatarChange(e) {
+  const file = e.target.files[0];
+  if (file) {
+    groupAvatarFile.value = file;
+    groupAvatarPreview.value = URL.createObjectURL(file);
+  }
+}
+function handleGroupAvatarDrop(e) {
+  e.preventDefault();
+  const file = e.dataTransfer.files[0];
+  if (file) {
+    groupAvatarFile.value = file;
+    groupAvatarPreview.value = URL.createObjectURL(file);
+  }
+}
+function handleGroupAvatarRemove() {
+  groupAvatarFile.value = null;
+  groupAvatarPreview.value = '';
+}
+// #endregion 
+
+// #region 初始化Store和用户信息
 const userInfoStore = useUserInfoStore()
 const contactStore = useContactStore();
 const userInfo = computed(() => userInfoStore.userInfo);
+// #endregion
 
+// #region 菜单配置
 // 菜单配置
 const MENU_CONFIG = {
   chat: {
@@ -432,7 +465,9 @@ const PATH_TO_ICON = Object.entries(MENU_CONFIG).reduce((acc, [key, value]) => {
   acc[value.path] = key;
   return acc;
 }, {});
+// #endregion
 
+// #region 路由和基础状态
 const router = useRouter();
 const route = useRoute();
 const isDarkMode = ref(true);
@@ -445,7 +480,9 @@ watch(isSidebarCollapse, (newVal) => {
 });
 const searchQuery = ref('');
 const currentView = ref('friends');
+// #endregion
 
+// #region 数据状态管理
 const friendList = ref([]);
 const groupList = ref([]);
 const contactList = ref([]);
@@ -455,7 +492,9 @@ const contactQuery = ref({
 });
 
 const activeIcon = ref('chat');
+// #endregion
 
+// #region 路由和菜单处理
 // 根据路由路径设置活动图标
 const setActiveIconFromRoute = () => {
   const path = route.path;
@@ -463,7 +502,7 @@ const setActiveIconFromRoute = () => {
   const matchedPath = Object.keys(PATH_TO_ICON)
     .filter(p => path.startsWith(p))
     .sort((a, b) => b.length - a.length)[0];
-  
+
   activeIcon.value = matchedPath ? PATH_TO_ICON[matchedPath] : 'chat';
 };
 
@@ -475,12 +514,17 @@ const handleMenuUpdate = (event) => {
 watch(() => route.path, () => {
   setActiveIconFromRoute();
 });
+// #endregion
 
+// #region 加载状态管理
 // 添加加载状态
 const isLoading = ref(false);
 const isFriendListLoaded = ref(false);
 const noMoreData = ref(false);
 
+// #endregion
+
+// #region 好友列表管理
 // 获取好友列表
 const fetchFriendList = async () => {
   try {
@@ -501,60 +545,36 @@ const fetchFriendList = async () => {
       ElMessage.error(res.msg || '获取好友列表失败');
     }
   } catch (error) {
-    console.error('获取好友列表错误:', error);
-    ElMessage.error('获取好友列表失败，请稍后重试');
+
   }
 };
+// #endregion
+
+// #region 联系人列表管理
+// 工具函数：将未读数拼接到联系人
+function mergeUnreadCount(contacts, unreadList) {
+  const unreadMap = new Map(unreadList.map(item => [item.contactId, item.count]));
+  return contacts.map(contact => ({
+    ...contact,
+    unreadCount: unreadMap.get(contact.contactId) || 0
+  }));
+}
 
 // 无限滚动加载更多
-const loadMore = async () => {
-  if (isLoading.value || noMoreData.value) return;
-  isLoading.value = true;
-  contactQuery.value.page++;
-  try {
-    const res = await getContactList(contactQuery.value);
-    if (res.code === 200) {
-      const contacts = res.data.records.map(contact => {
-        const friendInfo = friendMap.value.get(contact.friendId) || {};
-        return {
-          id: contact.friendId,     // id 应该是好友的ID
-          roomId: contact.roomId,   // roomId 用于聊天室标识
-          friendId: contact.friendId,
-          activeTime: contact.activeTime,
-          lastMsgId: contact.lastMsgId,
-          readTime: contact.readTime,
-          username: friendInfo.username || '未知用户',
-          avatar: friendInfo.avatar || '',
-          status: friendInfo.status || false,
-          createTime: friendInfo.createTime,
-          exep: friendInfo.exep,
-        };
-      });
-      if (contacts.length === 0) {
-        noMoreData.value = true;
-      } else {
-        contactList.value = contactList.value.concat(contacts);
-        // 获取每个新联系人的最新消息
-        for (const contact of contacts) {
-          if (contact.lastMsgId) {
-            await getLatestMessage(contact);
-          }
-        }
-        // 如果返回数量小于pageSize，说明没有更多了
-        if (contacts.length < contactQuery.value.pageSize) {
-          noMoreData.value = true;
-        }
-      }
-    } else {
-      ElMessage.error(res.msg || '获取会话列表失败');
-      noMoreData.value = true;
-    }
-  } catch (error) {
-    ElMessage.error('获取会话列表失败，请稍后重试');
-    noMoreData.value = true;
-  } finally {
-    isLoading.value = false;
-  }
+const loadMoreFriends = () => {
+  if (connectionStatus.value !== 'connected') return;
+  loadMoreList({
+    apiList: getContactList,
+    apiUnread: getUnreadMsgCnt,
+    query: contactQuery.value,
+    listRef: contactList,
+    getId: c => c.friendId,
+    getLastMsgId: c => c.lastMsgId,
+    getLatestMsg: getLatestMessage,
+    isLoadingRef: isLoading,
+    noMoreRef: noMoreData,
+    pageSizeKey: 'pageSize'
+  });
 };
 
 // 初始加载第一页
@@ -566,11 +586,20 @@ const fetchContactList = async () => {
     if (!isFriendListLoaded.value) {
       await fetchFriendList();
     }
-    const res = await getContactList(contactQuery.value);
-    if (res.code === 200) {
-      const contacts = res.data.records.map(contact => {
+    // 并发请求联系人和未读消息
+    const [contactRes, unreadRes] = await Promise.all([
+      getContactList(contactQuery.value),
+      getUnreadMsgCnt(contactQuery.value)
+    ]);
+    if (contactRes.code === 200 && unreadRes.code === 200) {
+      const unreadMap = {};
+      (unreadRes.data.records || []).forEach(item => {
+        unreadMap[item.contactId] = item.count;
+      });
+      const contacts = contactRes.data.records.map(contact => {
         const friendInfo = friendMap.value.get(contact.friendId) || {};
         return {
+          contactId: contact.id,
           id: contact.friendId,
           roomId: contact.roomId,
           friendId: contact.friendId,
@@ -582,6 +611,7 @@ const fetchContactList = async () => {
           status: friendInfo.status || false,
           createTime: friendInfo.createTime,
           exep: friendInfo.exep,
+          unreadCount: unreadMap[contact.id] || 0
         };
       });
       contactList.value = contacts;
@@ -590,17 +620,14 @@ const fetchContactList = async () => {
           await getLatestMessage(contact);
         }
       }
-      // 如果第一页数量小于pageSize，说明没有更多
       noMoreData.value = contacts.length < contactQuery.value.pageSize;
-      return contacts;
+      contactStore.setContacts(contacts);
     } else {
-      ElMessage.error(res.msg || '获取会话列表失败');
       contactList.value = [];
       noMoreData.value = true;
       return [];
     }
   } catch (error) {
-    ElMessage.error('获取会话列表失败，请稍后重试');
     contactList.value = [];
     noMoreData.value = true;
     return [];
@@ -625,73 +652,120 @@ const friendMap = computed(() => {
 
 // 在 script setup 中添加
 const messagePreviews = ref(new Map());
+const messageSenders = ref(new Map()); // 新增: 消息发送者id映射
 
-// 获取最新消息内容
+// 获取最新消息内容和发送者
 const getLatestMessage = async (contact) => {
   if (!contact.lastMsgId) return;
-  
   try {
     const res = await getMessageById(contact.lastMsgId);
     if (res.code === 200) {
       messagePreviews.value.set(contact.id, res.data.content);
+      // 新增: 记录发送者id
+      messageSenders.value.set(contact.id, res.data.fromUid);
     }
   } catch (error) {
     console.error('获取最新消息失败:', error);
   }
 };
+// #endregion
 
+// #region 群聊列表管理
 // 获取群聊会话列表
+
 const fetchGroupListRaw = async () => {
+  groupQuery.value.page = 1;
+  noMoreGroups.value = false;
+  isLoadingGroups.value = true;
   try {
-    const res = await getGroupList(groupQuery.value);
-    if (res.code === 200) {
-      const groups = res.data.records.map(group => ({
+    const [groupRes, unreadRes] = await Promise.all([
+      getGroupList(groupQuery.value),
+      getUnreadMsgCnt(groupQuery.value)
+    ]);
+    if (groupRes.code === 200 && unreadRes.code === 200) {
+      const unreadMap = {};
+
+      (unreadRes.data.records || []).forEach(item => {
+        unreadMap[item.contactId] = item.count;
+      });
+      const groups = groupRes.data.records.map(group => ({
         id: group.roomId,
         roomId: group.roomId,
         name: group.name,
         avatar: group.avatar,
         activeTime: group.activeTime,
         lastMsgId: group.lastMsgId,
+        readTime: group.readTime,
+        unreadCount: unreadMap[group.id] || 0
       }));
+      console.log('groups', groups);
       groupList.value = groups;
-      // 不再单独setContact，合并到统一管理
-      return groups;
+      // 获取每个群聊的最新消息
+      for (const group of groups) {
+        if (group.lastMsgId) {
+          await getGroupLatestMessage(group);
+        }
+      }
+      noMoreGroups.value = groups.length < groupQuery.value.pageSize;
+      contactStore.setGroupChats(groups);
     } else {
-      ElMessage.error(res.msg || '获取群聊会话列表失败');
+      groupList.value = [];
+      noMoreGroups.value = true;
       return [];
     }
   } catch (error) {
-    ElMessage.error('获取群聊会话列表失败，请稍后重试');
+    groupList.value = [];
+    noMoreGroups.value = true;
     return [];
+  } finally {
+    isLoadingGroups.value = false;
   }
 };
 
 // 统一管理所有会话
 const fetchAllConversations = async () => {
-  const [contacts, groups] = await Promise.all([
+  await Promise.all([
     fetchContactList(),
     fetchGroupListRaw()
   ]);
   // 分别存入私聊和群聊
-  contactStore.setContacts(contacts);
-  contactStore.setGroupChats(groups);
+
 };
+// #endregion
 
+const visitorCount = ref(0);
+
+// #region 生命周期钩子
 onMounted(() => {
+  if (userInfo.value.token) {
+    callAddVisitorOncePerDay()
+    console.log('callAddVisitorOncePerDay')
+  }
 
+  fetchVisitorCount().then(res => {
+    visitorCount.value = res.data;
+  });
   fetchAllConversations();
   if (isDarkMode.value) {
     document.body.classList.add('dark-theme');
   }
-  
+
   // 初始化时设置活动图标
   setActiveIconFromRoute();
-  
+
   window.addEventListener('update-active-menu', handleMenuUpdate);
   // 监听刷新会话列表事件
   emitter.on('refresh-contact-list', () => {
     console.log('收到 refresh-contact-list 事件');
     fetchAllConversations();
+  });
+  emitter.on('refresh-friend-contact-list', () => {
+    console.log('收到 refresh-friend-contact-list 事件');
+    fetchContactList();
+  });
+  emitter.on('refresh-group-contact-list', () => {
+    console.log('收到 refresh-group-contact-list 事件');
+    fetchGroupListRaw();
   });
   // 监听刷新好友列表事件
   emitter.on('refresh-friend-list', () => {
@@ -700,7 +774,7 @@ onMounted(() => {
   });
 
   console.log('Home 组件挂载，检查消息通知组件:', messageNotificationRef.value);
-  
+
   // 监听好友申请消息事件
   emitter.on('friend-apply', (data) => {
     console.log('Home 组件收到好友申请消息:', data);
@@ -711,6 +785,12 @@ onMounted(() => {
       }
     }
   });
+  // 监听用户上下线通知
+  emitter.on('user-status', (data) => {
+    if (!data || !Array.isArray(data.changeList)) return;
+
+    contactStore.updateContactsStatus(data.changeList);
+  });
 });
 
 onUnmounted(() => {
@@ -718,9 +798,14 @@ onUnmounted(() => {
   emitter.off('friend-apply');
   emitter.off('refresh-contact-list', fetchAllConversations);
   emitter.off('refresh-friend-list', fetchFriendList);
+  emitter.off('refresh-friend-contact-list', fetchContactList);
+  emitter.off('refresh-group-contact-list', fetchGroupListRaw);
+  emitter.off('user-status');
   window.removeEventListener('update-active-menu', handleMenuUpdate);
 });
+// #endregion
 
+// #region 主题和UI控制
 const toggleTheme = () => {
   isDarkMode.value = !isDarkMode.value;
   if (isDarkMode.value) {
@@ -745,7 +830,9 @@ const isActive = (path) => {
   }
   return route.path === path;
 };
+// #endregion
 
+// #region 搜索功能
 // 删除原有的搜索相关变量和函数
 const showSearchDialog = ref(false);
 const searchType = ref('friend');
@@ -755,7 +842,9 @@ const handleShowSearchDialog = (type) => {
   searchType.value = type;
   showSearchDialog.value = true;
 };
+// #endregion
 
+// #region 用户操作处理
 const handleLogout = () => {
   ElMessageBox.confirm(
     '确定要退出登录吗？',
@@ -766,14 +855,14 @@ const handleLogout = () => {
       type: 'warning',
     }
   )
-  .then(async () => {
+    .then(async () => {
       try {
         const token = userInfo.value.token;
         const res = await logoutService(token);
-        
+
         if (res.code === 200) {
           userInfoStore.removeUserInfo();
-         router.push('/login');
+          router.push('/login');
           ElMessage.success('退出成功');
         } else {
           ElMessage.error(res.msg || '退出失败');
@@ -785,7 +874,7 @@ const handleLogout = () => {
     })
     .catch(() => {
       // 取消退出
-  });
+    });
 };
 
 const handleMinimize = () => {
@@ -800,7 +889,9 @@ const handleMaximize = () => {
   const nextIcon = Object.keys(MENU_CONFIG)[nextIndex];
   handleMenuClick(MENU_CONFIG[nextIcon]);
 };
+// #endregion
 
+// #region 图标组件管理
 // 添加图标组件映射函数
 const AnthropicIcon = defineComponent({
   name: 'AnthropicIcon',
@@ -835,7 +926,9 @@ const getIconComponent = (icon) => {
   };
   return iconMap[icon] || ChatDotRound;
 };
+// #endregion
 
+// #region 群聊创建功能
 // 添加新的响应式变量
 const showCreateGroupDialog = ref(false);
 const groupForm = ref({
@@ -850,11 +943,16 @@ const handleShowCreateGroupDialog = () => {
 };
 
 // 处理创建群聊
-const handleCreateGroup = async () => {
+async function handleCreateGroup() {
+  let avatarUrl = groupForm.value.avatar;
+  if (groupAvatarFile.value) {
+    const res = await uploadImageFile(groupAvatarFile.value);
+    avatarUrl = res.data;
+  }
   try {
     const payload = {
       name: groupForm.value.name,
-      avatar: groupForm.value.avatar,
+      avatar: avatarUrl,
       groupDesc: groupForm.value.announcement
     };
     const res = await addGroupRoom(payload);
@@ -874,11 +972,6 @@ const handleCreateGroup = async () => {
   }
 };
 
-// 处理头像上传
-const beforeAvatarUpload = (file) => {
-  // TODO: 实现头像上传逻辑
-  return false;
-};
 
 // 处理重置表单
 const handleResetForm = () => {
@@ -887,8 +980,12 @@ const handleResetForm = () => {
     avatar: '',
     announcement: ''
   };
+  groupAvatarFile.value = null;
+  groupAvatarPreview.value = '';
 };
+// #endregion
 
+// #region 聊天功能
 // 修改处理聊天点击事件
 const handleChat = (contact) => {
   // 如果当前已经在聊天页面，且用户ID相同，则不进行跳转
@@ -896,19 +993,32 @@ const handleChat = (contact) => {
     return;
   }
   // 设置当前聊天对象
+  const roomId = contact.roomId;
+  //TODO: 调用服务端更新read_time
   contactStore.setCurrentChat(contact.id);
+  // 本地清除未读数，移除红点和闪烁动画
+  const idx = contactList.value.findIndex(c => c.contactId === contact.contactId);
+  if (idx !== -1) {
+    contactList.value[idx].unreadCount = 0;
+  }
   router.push(`/chat/${contact.id}`);
 };
+// #endregion
 
+// #region 消息通知功能
 // 添加消息通知相关的响应式变量
 const messageNotificationRef = ref(null);
 const notificationMessage = ref('');
 
 // 处理通知点击
 const handleNotificationClick = () => {
+  emitter.emit('refresh-mail-data');
   router.push('/mail');
-};
 
+};
+// #endregion
+
+// #region 签到功能
 const showSignInCalendar = ref(false);
 const signedDates = ref([]);
 const isTodaySignedIn = ref(false);
@@ -959,65 +1069,55 @@ const calendarBtnStyle = computed(() => ({
     : '0 2px 8px rgba(64, 158, 255, 0.18)',
   transition: 'background 0.3s',
 }));
+// #endregion
 
-
+// #region 群聊功能
 // 添加处理群聊点击事件
 const handleGroupChat = (group) => {
   // 如果当前已经在该群聊页面，则不进行跳转
   if (route.path === '/groupchat' && route.params.id === group.roomId?.toString()) {
     return;
   }
+  contactStore.setCurrentChat(group.id);
+  const idx = groupList.value.findIndex(c => c.id === group.id);
+  if (idx !== -1) {
+    groupList.value[idx].unreadCount = 0;
+  }
   router.push(`/groupchat/${group.roomId}`);
 };
 
 const groupQuery = ref({
   page: 1,
-  pageSize: 10 
+  pageSize: 10
 });
 const isLoadingGroups = ref(false);
 const noMoreGroups = ref(false);
 
 // 无限滚动加载更多群聊
-const loadMoreGroups = async () => {
-  if (isLoadingGroups.value || noMoreGroups.value) return;
-  isLoadingGroups.value = true;
-  groupQuery.value.page++;
-  try {
-    const res = await getGroupList(groupQuery.value);
-    if (res.code === 200) {
-      const groups = res.data.records.map(group => ({
-        id: group.roomId,
-        roomId: group.roomId,
-        name: group.name,
-        avatar: group.avatar,
-        activeTime: group.activeTime,
-        lastMsgId: group.lastMsgId,
-      }));
-      if (groups.length === 0) {
-        noMoreGroups.value = true;
-      } else {
-        groupList.value = groupList.value.concat(groups);
-        if (groups.length < groupQuery.value.pageSize) {
-          noMoreGroups.value = true;
-        }
-      }
-    } else {
-      ElMessage.error(res.msg || '获取群聊会话列表失败');
-      noMoreGroups.value = true;
-    }
-  } catch (error) {
-    ElMessage.error('获取群聊会话列表失败，请稍后重试');
-    noMoreGroups.value = true;
-  } finally {
-    isLoadingGroups.value = false;
-  }
+const loadMoreGroups = () => {
+  // 判断 WebSocket 是否连接
+  if (connectionStatus.value !== 'connected') return;
+  loadMoreList({
+    apiList: getGroupList,
+    apiUnread: getUnreadMsgCnt,
+    query: groupQuery.value,
+    listRef: groupList,
+    getId: g => g.roomId,
+    getLastMsgId: g => g.lastMsgId,
+    getLatestMsg: getGroupLatestMessage,
+    isLoadingRef: isLoadingGroups,
+    noMoreRef: noMoreGroups,
+    pageSizeKey: 'pageSize'
+  });
 };
+// #endregion
 
+// #region 计算属性
 // 添加计算属性用于过滤联系人和群组
 const filteredContacts = computed(() => {
   if (!searchQuery.value) return contactList.value;
   const query = searchQuery.value.toLowerCase();
-  return contactList.value.filter(contact => 
+  return contactList.value.filter(contact =>
     contact.username.toLowerCase().includes(query) ||
     String(contact.friendId).includes(query)
   );
@@ -1026,16 +1126,115 @@ const filteredContacts = computed(() => {
 const filteredGroups = computed(() => {
   if (!searchQuery.value) return groupList.value;
   const query = searchQuery.value.toLowerCase();
-  return groupList.value.filter(group => 
+  return groupList.value.filter(group =>
     group.name.toLowerCase().includes(query) ||
     String(group.roomId).includes(query)
   );
 });
+// #endregion
+
+function getSenderName(contact) {
+  const fromUid = messageSenders.value.get(contact.id);
+  if (!fromUid) return '';
+  const friend = friendMap.value.get(fromUid);
+  return friend ? friend.username : '';
+}
+
+const groupMessagePreviews = ref(new Map());
+const groupMessageSenders = ref(new Map());
+
+const getGroupLatestMessage = async (group) => {
+  if (!group.lastMsgId) return;
+  try {
+    const res = await getMessageById(group.lastMsgId);
+    if (res.code === 200) {
+      groupMessagePreviews.value.set(group.roomId, res.data.content);
+      groupMessageSenders.value.set(group.roomId, res.data.fromUid);
+    }
+  } catch (error) {
+    // 错误处理
+  }
+};
+
+function getGroupSenderName(group) {
+  const fromUid = groupMessageSenders.value.get(group.roomId);
+  if (!fromUid) return '';
+  // 先查好友列表
+  const friend = friendMap.value.get(fromUid);
+  if (friend) return friend.username;
+  // 再查群成员
+  const groupObj = groupList.value.find(g => g.roomId === group.roomId);
+  if (groupObj && groupObj.members) {
+    const member = groupObj.members.find(m => m.id === fromUid);
+    if (member) return member.name;
+  }
+  return '';
+}
 
 </script>
 
 
 <style scoped>
+.visitor-tag {
+  position: absolute;
+  right: 10px;
+  top: 50px;
+  padding: 4px 10px;
+  color: #fff;
+  background: rgba(5, 70, 211, 0.35);
+  /* 半透明灰色 */
+  border-radius: 14px;
+  font-size: 12px;
+  font-weight: 500;
+  opacity: 1;
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  z-index: 10;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+}
+
+.icon-bar {
+  padding-top: 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  /* 毛玻璃效果 */
+  backdrop-filter: blur(18px) saturate(180%);
+  -webkit-backdrop-filter: blur(18px) saturate(180%);
+  /* 嵌入式效果 */
+  box-shadow:
+    inset 0 2px 8px 0 rgba(255, 255, 255, 0.25),
+    0 4px 24px 0 rgba(0, 0, 0, 0.10);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  /* 反光高光 */
+  position: relative;
+  overflow: hidden;
+}
+
+
+.dark-mode .icon-bar {
+  box-shadow:
+    inset 0 2px 12px 0 rgba(255, 255, 255, 0.10),
+    0 4px 24px 0 rgba(0, 0, 0, 0.30);
+  border: 1.5px solid rgba(255, 255, 255, 0.10);
+}
+
+.dark-mode .icon-bar::before {
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0.04) 100%);
+  opacity: 0.5;
+}
+
+.dark-mode .icon-bar::after {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.10) 0%, rgba(255, 255, 255, 0.02) 100%);
+  opacity: 0.3;
+}
+
 /* 路由过渡动画 */
 .fade-enter-active,
 .fade-leave-active {
@@ -1291,17 +1490,20 @@ const filteredGroups = computed(() => {
   cursor: pointer;
   border-radius: 8px;
   transition: all 0.3s ease;
-  color: #909399; /* 默认颜色为灰色 */
+  color: #909399;
+  /* 默认颜色为灰色 */
 }
 
 .switch-btn:hover {
   background-color: rgba(64, 158, 255, 0.1);
-  color: #409EFF; /* 悬停时变为蓝色 */
+  color: #409EFF;
+  /* 悬停时变为蓝色 */
 }
 
 .switch-btn.active {
   background-color: rgba(64, 158, 255, 0.1);
-  color: #409EFF; /* 激活状态为蓝色 */
+  color: #409EFF;
+  /* 激活状态为蓝色 */
 }
 
 .switch-btn svg {
@@ -1342,9 +1544,15 @@ const filteredGroups = computed(() => {
 }
 
 .conversation-item.active {
-  background: linear-gradient(45deg, #409EFF, #409EFF);
+  background: linear-gradient(45deg, #274472 0%, #409EFF 100%);
   border-color: #409EFF;
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.3);
+  box-shadow: 0 2px 16px 0 rgba(64, 158, 255, 0.45);
+}
+
+.dark-mode .conversation-item.active {
+  background: linear-gradient(45deg, #274472 0%, #409EFF 100%);
+  border-color: #409EFF;
+  box-shadow: 0 2px 16px 0 rgba(64, 158, 255, 0.45);
 }
 
 .conversation-item.active .company-name,
@@ -1364,11 +1572,6 @@ const filteredGroups = computed(() => {
   transform: translateY(1px);
 }
 
-.dark-mode .conversation-item.active {
-  background: linear-gradient(45deg, #409EFF, #409EFF);
-  border-color: #409EFF;
-  box-shadow: 0 2px 12px rgba(64, 158, 255, 0.3);
-}
 
 .dark-mode .conversation-item.active .company-name,
 .dark-mode .conversation-item.active .timestamp,
@@ -1389,15 +1592,91 @@ const filteredGroups = computed(() => {
   color: #b0b0b0;
 }
 
-.dark-mode .unread-badge {
-  background: var(--el-color-primary);
-  color: #ffffff;
-  font-weight: 600;
-}
 
 .conversation-avatar {
   position: relative;
   margin-right: 12px;
+}
+
+.item-unread-badge {
+
+  position: absolute;
+  top: -1.5px;
+  left: 1.5px;
+  pointer-events: none;
+}
+
+.conversation-item.has-unread {
+  animation: flash-item 1s linear infinite alternate;
+}
+:deep(.el-badge__content--danger) {
+  scale: 1.1;
+  background: linear-gradient(145deg, #ff4e6a 0%, #e00d3a 60%, #ffb3c0 100%);
+  border: 0;
+  z-index: 10000 !important;
+  /* 毛玻璃效果 */
+  backdrop-filter: blur(6px) saturate(180%);
+  -webkit-backdrop-filter: blur(6px) saturate(180%);
+  /* 立体高光反光 */
+  box-shadow:
+    0 2px 8px 0 rgba(224, 13, 58, 0.18),
+    0 4px 16px 0 rgba(255, 80, 120, 0.18),
+    inset 0 2px 8px 0 rgba(255,255,255,0.45),
+    inset 0 8px 16px 0 rgba(255,255,255,0.18);
+  /* 轻微边框以增强毛玻璃感 */
+  border: 1px solid rgba(255,255,255,0.18);
+  /* 反光高光 */
+  position: relative;
+  overflow: visible;
+}
+:deep(.el-badge__content--danger)::after {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 8px;
+  width: 60%;
+  height: 30%;
+  background: linear-gradient(120deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.12) 100%);
+  border-radius: 50%;
+  filter: blur(1px);
+  pointer-events: none;
+  opacity: 0.85;
+}
+
+@keyframes flash-item {
+  0% {
+    background: rgba(192, 255, 0, 0.18);
+    /* 黄绿色，透明 */
+  }
+
+  50% {
+    background: rgba(192, 255, 0, 0.38);
+    /* 更高透明度，增强对比 */
+  }
+
+  100% {
+    background: rgba(192, 255, 0, 0.18);
+  }
+}
+
+.dark-mode .conversation-item.has-unread {
+  animation: flash-item-dark 1.4s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+}
+
+@keyframes flash-item-dark {
+  0% {
+    background: rgba(192, 255, 0, 0.18);
+    /* 黄绿色，透明 */
+  }
+
+  50% {
+    background: rgba(192, 255, 0, 0.38);
+    /* 更高透明度，增强对比 */
+  }
+
+  100% {
+    background: rgba(192, 255, 0, 0.18);
+  }
 }
 
 .online-status {
@@ -1461,7 +1740,7 @@ const filteredGroups = computed(() => {
 
 .message-time {
   font-size: 12px;
-  
+
   margin-left: 8px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -1524,21 +1803,26 @@ const filteredGroups = computed(() => {
   margin-right: 8px;
   transition: background 0.3s;
 }
+
 .calendar-btn:hover {
   filter: brightness(1.1);
 }
+
 .sign-dialog {
   border-radius: 18px;
   overflow: hidden;
   background: #fff;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
 }
+
 .sign-dialog .el-dialog__body {
   padding: 0 24px 24px 24px;
 }
+
 .sign-calendar-wrapper {
   padding: 12px 0 0 0;
 }
+
 .sign-calendar-header {
   display: flex;
   justify-content: center;
@@ -1548,9 +1832,11 @@ const filteredGroups = computed(() => {
   color: #409EFF;
   margin-bottom: 8px;
 }
+
 .sign-calendar-title {
   letter-spacing: 2px;
 }
+
 .sign-cell {
   width: 38px;
   height: 38px;
@@ -1565,41 +1851,50 @@ const filteredGroups = computed(() => {
   cursor: pointer;
   user-select: none;
 }
+
 :deep(.el-calendar__header) {
   display: none !important;
 }
+
 :deep(.el-calendar-table .signed-cell) {
   background: #67C23A !important;
   color: #fff !important;
 }
+
 :deep(.el-calendar-table .unsigned-cell) {
   background: #B71A1A !important;
   color: #fff !important;
 }
+
 :deep(.el-calendar-table .today-cell) {
   background: #409EFF !important;
   color: #fff !important;
 }
+
 .dark-mode :deep(.el-calendar-table .future-cell) {
   background: #23272e !important;
   color: #555 !important;
 }
+
 .sign-close-btn {
   border-radius: 8px;
   min-width: 80px;
   font-size: 15px;
 }
+
 .dark-mode .sign-dialog {
   background: #23272e;
-  box-shadow: 0 8px 32px rgba(0,0,0,0.38);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.38);
 }
+
 .dark-mode .sign-calendar-header {
   color: #90caf9;
 }
 
 
 .scroll-wrapper::-webkit-scrollbar {
-  display: none; /* Chrome/Safari */
+  display: none;
+  /* Chrome/Safari */
 }
 
 .sidebar-toggle-btn {
@@ -1659,10 +1954,12 @@ const filteredGroups = computed(() => {
   background: transparent !important;
   border: none !important;
 }
+
 :deep(.el-calendar-table) {
   background: transparent !important;
   border: none !important;
 }
+
 :deep(.el-calendar-table td) {
   border: none !important;
   background: transparent !important;
@@ -1670,6 +1967,7 @@ const filteredGroups = computed(() => {
   height: 54px !important;
   transition: background 0.2s;
 }
+
 :deep(.el-calendar-table .sign-cell-text) {
   display: flex;
   align-items: center;
@@ -1686,43 +1984,53 @@ const filteredGroups = computed(() => {
   cursor: pointer;
   user-select: none;
 }
+
 :deep(.el-calendar-table .sign-cell-text:hover) {
-  box-shadow: 0 4px 16px 0 rgba(64,158,255,0.10);
+  box-shadow: 0 4px 16px 0 rgba(64, 158, 255, 0.10);
   transform: translateY(-2px) scale(1.08);
 }
+
 :deep(.el-calendar-table .signed-cell.sign-cell-text) {
   background: #1AAD19 !important;
   color: #fff !important;
 }
+
 :deep(.el-calendar-table .unsigned-cell.sign-cell-text) {
   background: #B71A1A !important;
   color: #fff !important;
 }
+
 :deep(.el-calendar-table .today-cell.sign-cell-text) {
   background: #409EFF !important;
   color: #fff !important;
 }
+
 .dark-mode :deep(.el-calendar-table .sign-cell-text) {
   color: #eee;
   background: none;
 }
+
 .dark-mode :deep(.el-calendar-table .signed-cell.sign-cell-text) {
   background: #1AAD19 !important;
   color: #fff !important;
 }
+
 .dark-mode :deep(.el-calendar-table .unsigned-cell.sign-cell-text) {
   background: #B71A1A !important;
   color: #fff !important;
 }
+
 .dark-mode :deep(.el-calendar-table .today-cell.sign-cell-text) {
   background: #409EFF !important;
   color: #fff !important;
 }
+
 .dark-mode :deep(.el-calendar-table .sign-cell-text[disabled]),
 .dark-mode :deep(.el-calendar-table .sign-cell-text.disabled) {
   background: #23272e !important;
   color: #555 !important;
 }
+
 .dark-mode :deep(.el-calendar-table .prev-month .sign-cell-text),
 .dark-mode :deep(.el-calendar-table .next-month .sign-cell-text) {
   background: none !important;
@@ -1734,33 +2042,33 @@ const filteredGroups = computed(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 24px 32px 12px 32px;
+
   gap: 24px;
 }
+
 .calendar-ym {
   font-size: 1.2rem;
   font-weight: 600;
   letter-spacing: 1px;
   color: #222;
 }
+
 .calendar-stats {
   display: flex;
   gap: 16px;
   align-items: center;
 }
-.stat-item {
-  font-size: 0.98rem;
-}
-.stat-item b {
-  font-size: 1.08rem;
-}
+
 .dark-mode .calendar-ym {
   color: #fff;
 }
+
 .dark-mode .calendar-stats .stat-item {
   color: #aaa;
 }
 
+.avatar-offline {
+  filter: grayscale(1) brightness(0.8);
+  opacity: 0.7;
+}
 </style>
-
-

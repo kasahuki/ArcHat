@@ -1,30 +1,22 @@
 <template>
   <router-view v-if="!route.params.id"></router-view>
   <div v-else class="chat-container">
+    <!-- #region 连接状态提示 -->
     <!-- WebSocket 连接状态提示 -->
     <div v-if="connectionStatus === 'disconnected'" class="connection-status-bar">
-      <el-alert
-        title="WebSocket 连接已断开"
-        type="warning"
-        :closable="false"
-        show-icon
-
-      >
+      <el-alert title="WebSocket 连接已断开" type="warning" :closable="false" show-icon>
         <template #default>
           <span style="color:#409EFF; font-weight:600;">消息可能无法正常发送，请点击重新连接</span>
-          <danger-button
-            type="success"
-            size="small"
-            @click="handleManualReconnect"
-            :loading="connectionStatus === 'connecting'"
-            style="margin-left: 10px;"
-          >
+          <danger-button type="success" size="small" @click="handleManualReconnect"
+            :loading="connectionStatus === 'connecting'" style="margin-left: 10px;">
             {{ connectionStatus === 'connecting' ? '连接中...' : '重新连接' }}
           </danger-button>
         </template>
       </el-alert>
     </div>
+    <!-- #endregion -->
 
+    <!-- #region 顶部用户信息 -->
     <!-- 顶部用户信息（仅私聊） -->
     <div class="user-header">
       <div class="user-info">
@@ -34,14 +26,16 @@
           <div class="user-name">
             {{ currentChat.name }}
           </div>
-          <div class="user-status">
-            <span class="status-dot" :class="{ 'online': currentChat.status }"></span>
-            {{ currentChat.status ? '在线' : '离线' }}
+          <div class="user-status" :class="{ offline: !currentChatStatus }">
+            <span class="status-dot" :class="{ offline: !currentChatStatus }"></span>
+            {{ currentChatStatus ? '在线' : '离线' }}
           </div>
         </div>
       </div>
     </div>
+    <!-- #endregion -->
 
+    <!-- #region 聊天消息列表 -->
     <!-- 聊天显示信息框（可滚动） -->
     <div class="chat-message-list" ref="messagesContainer">
       <template v-if="messages.length > 0">
@@ -50,24 +44,35 @@
           <div v-if="shouldShowTime(msg, idx)" class="message-time-group">
             <span class="time-divider">{{ formatMessageDate(new Date(msg.time)) }}</span>
           </div>
-          <div :class="['chat-message-item', msg.side]">
+          <div :class="['chat-message-item', msg.side]" @mouseenter="hoverIdx = idx" @mouseleave="hoverIdx = null">
+            <!-- 撤回icon，仅自己消息可见，同行右侧 -->
+            <span v-if="msg.side === 'right'" class="recall-inline-icon" v-show="hoverIdx === idx"
+              @click="onRecallMessage(msg)">
+              <el-icon style="color:#f5222d;font-size:15px;vertical-align:middle;">
+                <Close />
+              </el-icon>
+              <span class="recall-text">撤回</span>
+            </span>
             <el-avatar v-if="msg.side === 'left'" :size="32" class="user-avatar" :src="currentChat.avatar"
               @click="(e) => handleViewUser(e)" />
             <div class="chat-bubble" v-html="linkify(msg.text)"></div>
             <el-avatar v-if="msg.side === 'right'" :size="32" class="user-avatar" :src="userStore.userInfo.avatar" />
+
           </div>
         </div>
       </template>
       <template v-else>
         <div class="no-message-tip" v-show="!isLoading">没有聊天记录</div>
       </template>
-      
+
       <!-- 加载动画 -->
       <div v-if="isLoading" class="loading-wrapper">
         <Loading />
       </div>
     </div>
+    <!-- #endregion -->
 
+    <!-- #region 底部输入区 -->
     <!-- 底部输入区 -->
     <div class="message-input-container">
       <el-button class="input-icon-btn link-icon" circle>
@@ -81,8 +86,7 @@
         </el-icon>
       </el-button>
       <div class="message-input">
-        <input type="text" v-model="inputValue" placeholder="Type a message..." 
-          @keyup.enter="sendMessage"
+        <input type="text" v-model="currentInputValue" placeholder="Type a message..." @keyup.enter="sendMessage"
           ref="messageInput" />
       </div>
       <el-button class="send-button" @click="sendMessage">
@@ -91,7 +95,9 @@
         </el-icon>
       </el-button>
     </div>
+    <!-- #endregion -->
 
+    <!-- #region Emoji 选择器 -->
     <!-- Emoji 选择器抽屉 -->
     <el-drawer v-model="showEmojiPicker" title="选择表情" direction="btt" size="400px" :with-header="false"
       class="emoji-drawer">
@@ -99,20 +105,30 @@
         :show-search="true" :show-categories="true" :show-recent="true" :recent="recentEmojis"
         :theme="isDarkMode ? 'dark' : 'light'" />
     </el-drawer>
+    <!-- #endregion -->
 
+    <!-- #region 用户详情弹窗 -->
     <!-- 用户详情弹窗 -->
     <user-detail-popup v-model:visible="showUserDetail" :user="currentChat" :position="userDetailPosition"
       :hide-start-chat="true" :hide-add-friend="true" />
+    <!-- #endregion -->
+
+    <!-- 遮罩和加载动画 -->
+    <div v-if="isReconnecting" class="ws-reconnect-mask">
+      <WaitConnLoading />
+    </div>
   </div>
 </template>
 
 <script setup>
+// #region 导入依赖
 import { ref, onMounted, watch, onUnmounted, computed, nextTick, h } from 'vue';
 import {
   Microphone,
   ChatRound,
   Link,
-  Position
+  Position,
+  Close
 } from '@element-plus/icons-vue';
 import 'emoji-picker-element';
 import { useDark } from '@vueuse/core';
@@ -125,24 +141,43 @@ import ChatWebSocket from '@/api/chat.js';
 import { useUserInfoStore } from '@/stores/user';
 import { useContactStore } from '@/stores/contact';
 import { calculateLevel, linkify } from '@/utils/exp';
-import { getMessageList } from '@/api/chatService';
+import { getFriendMessageList } from '@/api/chatService';
 import emitter from '@/utils/eventBus';
 import Loading from '@/components/loading.vue';
 import clickSound from '@/assets/sounds/click.m4a'
 import dangerButton from '@/components/dangerButton.vue';
+import WaitConnLoading from '@/components/WaitConnLoading.vue';
+// #endregion
 
+// #region 基础状态与引用
 const route = useRoute();
 const router = useRouter();
 const userStore = useUserInfoStore();
 const contactStore = useContactStore();
 
-const inputValue = ref('');
+// const inputValue = ref('');
+const inputValueMap = ref({});
+const currentInputValue = computed({
+  get() {
+    return inputValueMap.value[currentChat.value.roomId] || '';
+  },
+  set(val) {
+    inputValueMap.value[currentChat.value.roomId] = val;
+  }
+});
 const messages = ref([]);
 const showEmojiPicker = ref(false);
 const recentEmojis = ref([]);
 const isDarkMode = useDark();
+const hoverIdx = ref(null);
+const isReconnecting = ref(false);
+function onRecallMessage(msg) {
+  // TODO: 撤回逻辑
+  ElMessage.info('撤回功能开发中');
+}
+// #endregion
 
-// 用户详情相关
+// #region 用户详情相关
 const showUserDetail = ref(false);
 const selectedUser = ref({
   id: '',
@@ -153,51 +188,45 @@ const selectedUser = ref({
   createTime: '',
 });
 const userDetailPosition = ref({ x: 0, y: 0 });
+// #endregion
 
-// 当前聊天对象信息
+// #region 当前聊天对象信息
 const currentChat = ref({
   id: '',
   name: '',
-  roomId:'',
+  roomId: '',
   avatar: '',
   status: '',
-  level:'',
-  createTime:''
+  level: '',
+  createTime: ''
 });
+// #endregion
 
-// 消息相关
+// #region 消息相关
 const message = ref('');
 const messagesContainer = ref(null);
-
-// 添加输入框引用
 const messageInput = ref(null);
+// #endregion
 
-// 使用 store 中的 WebSocket 实例
+// #region WebSocket 相关
 const chatWS = computed(() => userStore.chatWS);
+const connectionStatus = ref('connected');
 
-// 连接状态
-const connectionStatus = computed(() => userStore.connectionStatus);
+// #endregion
 
-// 添加加载状态
+// #region 加载与音频相关
 const isLoading = ref(false);
-
-// 在 script setup 顶部添加
 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 let messageSound = null;
 
-// 添加音频初始化函数
 const initAudio = async () => {
   try {
     await audioContext.resume();
-    // 创建新的音频实例
     messageSound = new Audio();
-    // 使用导入的音频文件
     messageSound.src = clickSound;
     messageSound.volume = 1.0;
     messageSound.preload = 'auto';
-    
-    // 等待音频加载完成
-        await new Promise((resolve, reject) => {
+    await new Promise((resolve, reject) => {
       messageSound.addEventListener('canplaythrough', resolve, { once: true });
       messageSound.addEventListener('error', (e) => {
         console.error('音频加载错误:', e);
@@ -205,20 +234,19 @@ const initAudio = async () => {
         reject(e);
       }, { once: true });
       messageSound.load();
-        });
-    
+    });
     console.log('音频初始化成功');
-      } catch (error) {
+  } catch (error) {
     console.error('音频初始化失败:', error);
   }
 };
+// #endregion
 
-// 检查 WebSocket 连接状态
+// #region 工具函数
 const checkWebSocketConnection = () => {
   return chatWS.value && typeof chatWS.value.isConnected === 'function' && chatWS.value.isConnected();
 };
 
-// 滚动到底部的函数
 const scrollToBottom = () => {
   nextTick(() => {
     const messageList = document.querySelector('.chat-message-list');
@@ -227,28 +255,24 @@ const scrollToBottom = () => {
     }
   });
 };
+// #endregion
 
-// 检查并处理聊天
+// #region 聊天初始化与历史消息
 const checkAndHandleChat = async (userId) => {
   try {
-    // 1. 检查是否是好友
     const friendRes = await checkFriend(userId);
     if (friendRes.code !== 200 || friendRes.data === false) {
       router.push('/404');
       return;
     }
-
-    // 2. 检查状态为正常的私聊房间是否存在
     const roomRes = await checkPrivateRoom(userId);
     if (roomRes.code === 200 && roomRes.data === true) {
-      // 如果房间已存在，直接跳转到该房间
-
       return;
     } else {
-      // 创建私聊房间
       const createRes = await addPrivateRoom({ uid: userId });
       if (createRes.code === 200) {
-        emitter.emit('refresh-contact-list');
+        emitter.emit('refresh-friend-contact-list');
+        await new Promise(resolve => setTimeout(resolve, 1000));
         return;
       } else {
         router.push('/404');
@@ -260,13 +284,11 @@ const checkAndHandleChat = async (userId) => {
   }
 };
 
-// 获取历史消息
 const getHistoryMessages = async (roomId) => {
   try {
     isLoading.value = true;
-    const res = await getMessageList({ roomId });
+    const res = await getFriendMessageList({ roomId });
     if (res.code === 200) {
-      // 将历史消息转换为前端显示格式
       const historyMessages = res.data.map(msg => ({
         side: msg.fromUid === userStore.userInfo.uid ? 'right' : 'left',
         text: msg.content,
@@ -287,22 +309,26 @@ const getHistoryMessages = async (roomId) => {
     isLoading.value = false;
   }
 };
+// #endregion
 
-// 监听路由参数变化
+// #region 路由监听与会话切换
 watch(
   () => route.params.id,
   async (newId) => {
-    if (route.path.startsWith('/chat/') && newId) {
+    if (route.path.startsWith('/chat/')) {
+      newId = Number(newId);
       isLoading.value = true;
+    
       await checkAndHandleChat(newId);
       try {
-        // 从 contactStore 中获取当前聊天的联系人信息
-        const chatUser = contactStore.getContactById(newId);
-        console.log('chatUser', chatUser);
-        // 设置当前聊天对象
+        let chatUser = contactStore.getContactById(newId);
+     
+        if (!chatUser) {
+          isReconnecting.value = true;
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          chatUser = contactStore.getContactById(newId);
+        }
         contactStore.setCurrentChat(newId);
-
-        // 私聊数据模型
         currentChat.value = {
           id: chatUser.id,
           roomId: chatUser.roomId,
@@ -312,17 +338,15 @@ watch(
           level: chatUser.exep ? calculateLevel(chatUser.exep) : '',
           createTime: chatUser.createTime
         };
-
-        // 获取历史消息
         if (chatUser.roomId) {
           await getHistoryMessages(chatUser.roomId);
         }
         scrollToBottom();
       } catch (error) {
-        console.error('切换会话错误:', error);
-        ElMessage.error('切换会话失败，请稍后重试');
+        router.push('/chat');
       } finally {
         isLoading.value = false;
+        isReconnecting.value = false;
       }
     }
   },
@@ -333,52 +357,55 @@ watch(
   }
 );
 
-// 组件挂载时初始化
+const currentChatStatus = computed(() => {
+  if (!currentChat.value.id) return false;
+  const friend = contactStore.getContactById(currentChat.value.id);
+  return friend ? friend.status : false;
+});
+// #endregion
+
+
+
+
+// #region 生命周期钩子
 onMounted(() => {
-  console.log('Chat 组件挂载，设置消息监听');
+  
+  emitter.on('websocket-reconnect', () => {
+    console.log('Chat收到WebSocket重连事件，显示重连弹窗');
+    connectionStatus.value = 'disconnected';
+  });
+  emitter.on('websocket-connected', () => {
+    console.log('Chat收到WebSocket连接成功事件，关闭重连弹窗');
+    isReconnecting.value = false;
+    connectionStatus.value = 'connected';
+  });
 
   emitter.on('chat-message', (messageData) => {
     console.log('Chat 组件收到聊天消息:', messageData);
-    
-    // 检查是否在当前聊天界面
     const isInCurrentChat = currentChat.value && currentChat.value.id === messageData.fromUid;
     console.log('当前聊天状态:', {
       currentChatId: currentChat.value?.id,
       messageFromUid: messageData.fromUid,
       isInCurrentChat
     });
-    
-    // 如果不在当前聊天界面，显示通知
     if (!isInCurrentChat) {
-      // 从联系人列表中获取发送者信息
       const sender = contactStore.getContactById(messageData.fromUid);
       if (sender) {
-        // 播放提示音
         const playSound = async () => {
           try {
             if (!messageSound) {
               await initAudio();
             }
-            
-            // 确保音频上下文已恢复
             await audioContext.resume();
-            // 确保音量最大
             messageSound.volume = 1.0;
-            // 重置音频到开始位置
             messageSound.currentTime = 0;
-            // 播放音频
             await messageSound.play();
           } catch (error) {
             console.error('播放提示音失败:', error);
-            // 如果播放失败，尝试重新初始化
             messageSound = null;
           }
         };
-
-        // 调用播放函数
         playSound();
-        
-        // 使用 ElNotification 显示通知
         const notification = ElNotification({
           title: '新消息',
           message: `${sender.username} 给您发送了一条消息`,
@@ -387,92 +414,71 @@ onMounted(() => {
           position: 'top-right',
           customClass: 'apple-notification',
           onClick: () => {
-            // 设置当前聊天对象
             contactStore.setCurrentChat(sender.id);
-            // 使用发送者的ID进行跳转
             router.push(`/chat/${sender.id}`);
-            // 触发刷新 mail 数据的事件
             emitter.emit('refresh-mail-data');
             notification.close();
           }
         });
       }
     } else {
-      // 在当前聊天界面时添加消息
       console.log('添加消息到当前聊天:', messageData);
       messages.value.push({
         side: messageData.fromUid === userStore.userInfo.uid ? 'right' : 'left',
         text: messageData.content,
         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       });
-      
-      // 强制触发响应式更新并滚动到底部
       nextTick(() => {
         scrollToBottom();
       });
     }
   });
-
-  // 监听消息列表变化
   watch(messages, () => {
     scrollToBottom();
   }, { deep: true });
-
-  // 在组件挂载时初始化音频
   const handleUserInteraction = async () => {
     await initAudio();
-    // 移除事件监听
     document.removeEventListener('click', handleUserInteraction);
     document.removeEventListener('touchstart', handleUserInteraction);
   };
-
-  // 添加事件监听
   document.addEventListener('click', handleUserInteraction);
   document.addEventListener('touchstart', handleUserInteraction);
 });
 
-// 组件卸载时移除事件监听
 onUnmounted(() => {
   console.log('Chat 组件卸载，移除消息监听');
   emitter.off('chat-message');
+  emitter.off('websocket-reconnect');
+  emitter.off('websocket-connected');
 });
+// #endregion
 
-// 发送消息
+// #region 发送消息
 const sendMessage = async () => {
-  if (!inputValue.value.trim()) return;  
-  
-  // 检查 WebSocket 连接状态
+  if (!currentInputValue.value.trim()) return;
   if (!checkWebSocketConnection()) {
-    ElMessage.warning('WebSocket 未连接，请点击重新连接按钮');
+    // 不显示警告消息，让连接状态弹窗显示重连按钮
+    // 连接状态弹窗会在connectionStatus为'disconnected'时自动显示
     return;
   }
-
   try {
-    // 构造消息体
     const msg = {
       type: 4,
       data: {
         type: 1,
         targetUid: currentChat.value.id, // 使用好友的ID
         roomId: currentChat.value.roomId,
-        content: inputValue.value
+        content: currentInputValue.value
       }
     };
     console.log('发送消息:', msg);
-
-    // 通过 WebSocket 发送
     chatWS.value.send(msg);
-
-    // 本地显示消息
     messages.value.push({
       side: 'right',
-      text: inputValue.value,
+      text: currentInputValue.value,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });
-
-    inputValue.value = '';
-
-    // 发送后让输入框获得焦点
+    inputValueMap.value[currentChat.value.roomId] = '';
     nextTick(() => {
       if (messageInput.value) {
         messageInput.value.focus();
@@ -484,38 +490,36 @@ const sendMessage = async () => {
     ElMessage.error('发送消息失败，请检查网络连接');
   }
 };
+// #endregion
 
+// #region Emoji 选择
 const onEmojiSelect = (event) => {
   const emoji = event.detail.unicode;
-  inputValue.value += emoji;
-
-  // 更新最近使用的表情
+  currentInputValue.value += emoji;
   if (!recentEmojis.value.includes(emoji)) {
     recentEmojis.value = [emoji, ...recentEmojis.value].slice(0, 20);
   }
 };
+// #endregion
 
-// 查看用户详情
-const handleViewUser = ( event) => {
+// #region 用户详情弹窗
+const handleViewUser = (event) => {
   const rect = event.target.getBoundingClientRect();
   userDetailPosition.value = {
     x: rect.right + 10,
     y: rect.top - 10
   };
-
-
   showUserDetail.value = true;
 };
+// #endregion
 
-// 消息分组计算属性
+// #region 消息分组与时间显示
 const groupedMessages = computed(() => {
   const groups = [];
   let currentGroup = null;
-
   messages.value.forEach(msg => {
     const msgDate = new Date(msg.time);
     const dateStr = formatMessageDate(msgDate);
-
     if (!currentGroup || currentGroup.time !== dateStr) {
       currentGroup = {
         time: dateStr,
@@ -525,43 +529,144 @@ const groupedMessages = computed(() => {
     }
     currentGroup.messages.push(msg);
   });
-
   return groups;
 });
 
-// 判断是否显示时间
 const shouldShowTime = (currentMsg, index) => {
-  if (index === 0) return true; // 第一条消息显示时间
-  
+  if (index === 0) return true;
   const currentTime = new Date(currentMsg.time);
   const prevTime = new Date(messages.value[index - 1].time);
-  
-  // 计算时间差（毫秒）
   const timeDiff = Math.abs(currentTime - prevTime);
-  // 5分钟 = 5 * 60 * 1000 毫秒
   return timeDiff > 5 * 60 * 1000;
 };
 
-// 格式化消息日期
 const formatMessageDate = (date) => {
   const year = date.getFullYear();
   const month = date.getMonth() + 1;
   const day = date.getDate();
   const hours = date.getHours().toString().padStart(2, '0');
   const minutes = date.getMinutes().toString().padStart(2, '0');
-  
   return `${year}-${month}-${day} ${hours}:${minutes}`;
 };
+// #endregion
 
-// 手动重连
+// #region 手动重连
 const handleManualReconnect = async () => {
   try {
-    userStore.manualReconnect();
+    isReconnecting.value = true; // 显示加载动画
+    connectionStatus.value = 'connecting'; // 显示重连按钮文字为连接中...
+    setTimeout(async () => {
+      await userStore.manualReconnect();
+    }, 1500);
   } catch (error) {
-    console.error('手动重连失败:', error);
-    ElMessage.error('重连失败，请稍后重试');
+    isReconnecting.value = false;
+    ElMessage.error('手动重连失败');
   }
 };
+// #endregion
+watch(connectionStatus, (val) => {
+  console.log('Chat.vue 观察到 connectionStatus:', val);
+  if (val === 'disconnected') {
+    ElMessage.warning('WebSocket 连接已断开，请刷新或者点击重连');
+  }
+});
 </script>
 
 <style scoped src="@/assets/styles/chat.css"></style>
+<style scoped>
+.status-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #67C23A;
+  margin-right: 4px;
+  vertical-align: middle;
+  transition: background 0.2s;
+}
+
+.status-dot.offline {
+  background: #f5222d;
+}
+
+.user-status {
+  color: #67C23A;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.user-status.offline {
+  color: #f5222d;
+}
+
+.recall-inline-icon {
+  margin-top: 10px;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+  font-weight: 500;
+  opacity: 0;
+  background: rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  backdrop-filter: blur(8px) saturate(180%);
+  -webkit-backdrop-filter: blur(8px) saturate(180%);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  padding: 2px 10px;
+  transform: translateX(8px);
+  pointer-events: none;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.recall-inline-icon:hover {
+  background: rgba(44, 4, 4, 0.8);
+}
+
+.chat-message-item:hover .recall-inline-icon {
+  opacity: 1;
+  transform: translateX(0);
+  pointer-events: auto;
+}
+
+.recall-text {
+  color: #f1101b;
+  font-size: 13px;
+  margin-left: 2px;
+}
+
+.ws-reconnect-mask {
+  position: fixed;
+  z-index: 99999;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.6);
+  backdrop-filter: blur(6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+body.dark-theme .ws-reconnect-mask {
+  background: rgba(30, 30, 30, 0.6);
+}
+
+.app-container,
+.chat-container {
+  filter: blur(0px);
+  transition: filter 0.2s;
+}
+
+.ws-reconnect-mask~.app-container,
+.ws-reconnect-mask~.chat-container {
+  filter: blur(4px);
+}
+
+.blurred {
+  filter: blur(4px);
+  pointer-events: none;
+}
+</style>

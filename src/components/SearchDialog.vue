@@ -402,9 +402,14 @@ const handleAddItem = async (item) => {
 // 处理添加好友
 const handleAddFriend = async (friend) => {
   try {
-    // TODO: 实现添加好友的逻辑
-    await addFriend(friend.id)
-    ElMessage.success('好友添加请求已发送');
+    const response = await addFriend({
+      friendId: friend.id
+    });
+    if (response.code === 200) {
+      ElMessage.success('好友添加请求已发送');
+    } else {
+      ElMessage.error(response.msg || '添加好友失败');
+    }
   } catch (error) {
     console.error('添加好友失败:', error);
 

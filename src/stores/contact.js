@@ -20,6 +20,8 @@ export const useContactStore = defineStore('contact', () => {
 
   // 批量添加联系人（私聊）
   const setContacts = (contactList) => {
+    // 刷新时先清空缓存
+    contacts.value.clear();
     if (Array.isArray(contactList)) {
       contactList.forEach(contact => {
         if (contact && contact.id) {
@@ -79,18 +81,29 @@ export const useContactStore = defineStore('contact', () => {
     if (contact) {
       // 删除联系人
       contacts.value.delete(userId);
-      
       // 如果当前正在与该联系人聊天，清除当前聊天ID
       if (currentChatId.value === userId) {
         currentChatId.value = null;
       }
     }
+    // 额外：彻底清除所有以该好友id为key的会话缓存（如有）
+    // 由于contacts是Map，已删除；currentChatId已处理
+    // 如果有其它缓存结构（如会话消息Map），可在此处一并清理
   };
 
   // 清空群聊
   const clearGroupChats = () => {
     groupChats.value.clear();
   };
+
+  // 批量更新好友在线状态
+  function updateContactsStatus(changeList) {
+    if (!Array.isArray(changeList)) return;
+    changeList.forEach(({ uid, activeStatus }) => {
+      const contact = contacts.value.get(uid);
+      if (contact) contact.status = !!activeStatus;
+    });
+  }
 
   return {
     contacts,
@@ -106,7 +119,8 @@ export const useContactStore = defineStore('contact', () => {
     getCurrentChat,
     clearContacts,
     clearGroupChats,
-    removeContact
+    removeContact,
+    updateContactsStatus
   };
 }, {
   // 为什么不加这个就不行！！！

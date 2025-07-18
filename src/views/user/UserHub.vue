@@ -17,7 +17,13 @@
               <div class="avatar-upload-icon" @click="showAvatarUploadDialog = true">
                 <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Flowbite Icons by Themesberg - https://github.com/themesberg/flowbite-icons/blob/main/LICENSE --><path fill="currentColor" fill-rule="evenodd" d="M12 3a1 1 0 0 1 .78.375l4 5a1 1 0 1 1-1.56 1.25L13 6.85V14a1 1 0 1 1-2 0V6.85L8.78 9.626a1 1 0 1 1-1.56-1.25l4-5A1 1 0 0 1 12 3M9 14v-1H5a2 2 0 0 0-2 2v4a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-4a2 2 0 0 0-2-2h-4v1a3 3 0 1 1-6 0m8 2a1 1 0 1 0 0 2h.01a1 1 0 1 0 0-2z" clip-rule="evenodd"/></svg>
               </div>
-              <el-avatar :size="120" :src="userInfo.avatar" />
+              <el-image
+            :src="userInfo.avatar"
+            :preview-src-list="[userInfo.avatar]"
+            :initial-index="0"
+            fit="cover"
+            style="width: 120px; height: 120px; border-radius: 50%;"
+          />
              
             </div>
             <div class="profile-info flex-1">
@@ -28,7 +34,7 @@
                   placement="top"
                   :width="300"
                   trigger="manual"
-                  popper-class="username-popover"
+                  :popper-class="username-popover"
                 >
                   <template #reference>
                     <el-icon class="edit-icon" @click="handleEditUsername"><Edit /></el-icon>
@@ -97,11 +103,11 @@
             <div class="part-header">
               <h3 class="part-title">我的好友</h3>
               <el-space wrap :size="20">
-                <DangerButton type="primary" @click="showFriendsDialog = true">
+                <DangerButton type="gradient-teal" @click="showFriendsDialog = true">
                   <el-icon><Setting /></el-icon>
                   管理好友
                 </DangerButton>
-                <DangerButton type="primary" @click="handleShowSearchDialog('friend')">
+                <DangerButton type="gradient-green" @click="handleShowSearchDialog('friend')">
                   <el-icon><Plus /></el-icon>
                   添加好友
                 </DangerButton>
@@ -133,11 +139,11 @@
             <div class="part-header">
               <h3 class="part-title">我的群聊</h3>
               <el-space wrap :size="20">
-                <DangerButton type="primary" @click="showManageGroupsDialog = true">
+                <DangerButton type="gradient-teal" @click="showManageGroupsDialog = true">
                   <el-icon><Setting /></el-icon>
                   管理群聊
                 </DangerButton>
-                <DangerButton type="primary" @click="handleShowSearchDialog('group')">
+                <DangerButton type="gradient-green" @click="handleShowSearchDialog('group')">
                   <el-icon><Plus /></el-icon>
                   添加群聊
                 </DangerButton>
@@ -189,7 +195,7 @@
               <el-input v-model="settingsForm.confirmPassword" type="password" placeholder="请再次输入新密码" />
             </el-form-item>
             <el-form-item>
-              <DangerButton type="primary" @click="saveSettings">保存修改</DangerButton>
+              <DangerButton type="warning" @click="saveSettings">保存修改</DangerButton>
             </el-form-item>
           </el-form>
         </div>
@@ -313,18 +319,84 @@
               <span class="custom-tab-icon"><component :is="RequestIcon" /></span>
             </template>
             <div class="manage-groups-content">
+              <!-- 美化后的筛选区域 -->
+              <div class="filter-section">
+                <el-select
+                  v-model="filterGroupId"
+                  placeholder="选择群聊"
+                  clearable
+                  style="width:140px"
+                  filterable
+                >
+                  <el-option
+                    v-for="g in groups"
+                    :key="g.id"
+                    :label="g.name"
+                    :value="g.id"
+                  />
+                </el-select>
+                <el-date-picker
+                  v-model="filterDateRange"
+                  type="daterange"
+                  range-separator="至"
+                  start-placeholder="开始"
+                  end-placeholder="结束"
+                  style="width:220px"
+                  value-format="YYYY-MM-DD"
+                  clearable
+                />
+              </div>
               <div class="group-requests-list">
                 <div v-if="pagedRequests.length === 0" class="empty-requests">暂无入群申请</div>
                 <div v-for="req in pagedRequests" :key="req.id" class="group-request-item">
                   <el-avatar :size="40" :src="req.avatar" />
                   <div class="request-info">
-                    <div class="request-user">{{ req.username }}</div>
-                    <div class="request-group">申请加入：{{ req.groupName }}</div>
-                    <div class="request-time">{{ req.time }}</div>
+                    <div class="request-user"><b>{{ req.username }}</b></div>
+                    <div class="request-group">
+                      申请加入：<span class="group-name-link">{{ req.groupName }}</span>
+                    </div>
+                  </div>
+                  <div class="request-meta">
+                    <div class="request-msg-glass" v-if="req.msg">{{ req.msg }}</div>
+                    <div class="request-time-blue">{{ formatDateTime(req.time) }}</div>
                   </div>
                   <div class="request-actions">
-                    <DangerButton type="primary" size="small">同意</DangerButton>
-                    <DangerButton type="danger" size="small">拒绝</DangerButton>
+                    <DangerButton
+                      v-if="req.status === 0"
+                      type="primary"
+                      size="small"
+                      :loading="requestLoadingMap[req.id]"
+                      @click="() => handleRequestAction(req, 1)"
+                    >
+                      同意
+                    </DangerButton>
+                    <DangerButton
+                      v-if="req.status === 0"
+                      type="warning"
+                      size="small"
+                      :loading="requestLoadingMap[req.id]"
+                      @click="() => handleRequestAction(req, 2)"
+                    >
+                      拒绝
+                    </DangerButton>
+                    <DangerButton
+                      v-if="req.status === 1"
+                      type="success"
+                      size="small"
+                      disabled
+                      style="cursor:default"
+                    >
+                      已同意
+                    </DangerButton>
+                    <DangerButton
+                      v-if="req.status === 2"
+                      type="danger"
+                      size="small"
+                      disabled
+                      style="cursor:default"
+                    >
+                      已拒绝
+                    </DangerButton>
                   </div>
                 </div>
               </div>
@@ -333,10 +405,10 @@
                   v-model:current-page="requestsPage"
                   v-model:page-size="requestsPageSize"
                   :page-sizes="[5, 10, 20, 50]"
-                  :total="mockRequests.length"
+                  :total="requestsTotal"
                   layout="total, sizes, prev, pager, next"
-                  @size-change="val => { requestsPageSize = val; requestsPage = 1; }"
-                  @current-change="val => requestsPage = val"
+                  @size-change="val => { requestsPageSize.value = val; requestsPage.value = 1; }"
+                  @current-change="val => requestsPage.value = val"
                 />
               </div>
             </div>
@@ -381,6 +453,47 @@
         v-model:visible="showGroupDrawer"
         :group="selectedGroupForDrawer"
       />
+
+      <!-- 退出登录确认弹窗 -->
+      <div v-if="showLogoutConfirm" class="logout-overlay" @click="cancelLogout">
+        <WorningTips 
+          title="退出登录"
+          message="确定要退出系统吗？退出后需要重新登录。"
+          confirm-text="退出"
+          cancel-text="取消"
+          icon-bg-color="#fef2f2"
+          icon-color="#ef4444"
+          confirm-button-color="#ef4444"
+          width="350px"
+          @confirm="confirmLogout"
+          @cancel="cancelLogout"
+        />
+      </div>
+
+      <!-- 保存设置确认弹窗 -->
+      <div v-if="showSaveConfirm" class="logout-overlay" @click="cancelSaveSettings">
+        <WorningTips 
+          title="确认修改密码"
+          message="确定要修改密码吗？修改成功后需要重新登录。"
+          confirm-text="确认修改"
+          cancel-text="取消"
+          icon-bg-color="#f0f9ff"
+          icon-color="#3b82f6"
+          confirm-button-color="#3b82f6"
+          width="350px"
+          @confirm="confirmSaveSettings"
+          @cancel="cancelSaveSettings"
+        />
+      </div>
+
+      <!-- 成功提示弹窗 -->
+      <div v-if="showSuccessTips" class="logout-overlay">
+        <SuccessTips 
+          title="密码修改成功"
+          message="您的密码已成功修改，即将跳转到登录页面..."
+          @close="closeSuccessTips"
+        />
+      </div>
     </main>
 
 
@@ -404,11 +517,14 @@ import { logoutService, modifyPwdService, modifyUsernameService, modifyAvatarSer
 import { deleteFriend } from '@/api/friend';
 import { useUserInfoStore } from '@/stores/user';
 import emitter from '@/utils/eventBus';
-import { getGroupDetail, getGroupMemberCount } from '@/api/room';
+import { getGroupDetail, getGroupMemberCount, getOtherJoinGroupApplyList, handleGroupJoinApply } from '@/api/room';
 import { useContactStore } from '@/stores/contact';
 import { uploadImageFile } from '@/utils/fileHandler';
 import ExpDialog from '@/components/ExpDialog.vue';
 import GroupDetailDrawer from '@/components/GroupDetailDrawer.vue';
+import WorningTips from '@/components/WorningTips.vue';
+import SuccessTips from '@/components/SuccessTips.vue';
+import { formatDateTime } from '@/utils/time';
 import { SwitchButton,Close,Edit,Delete,Search,Plus,Check,Folder,UserFilled,View,Setting,MoreFilled } from '@element-plus/icons-vue';
 const router = useRouter();
 const userInfoStore = useUserInfoStore();
@@ -420,6 +536,9 @@ const friendSearchQuery = ref('');
 const showAvatarUploadDialog = ref(false);
 const showGroupDrawer = ref(false);
 const selectedGroupForDrawer = ref(null);
+const showLogoutConfirm = ref(false);
+const showSaveConfirm = ref(false);
+const showSuccessTips = ref(false);
 
 // 等级相关数据
 const userExp = computed(() => userInfo.value.exep);
@@ -485,12 +604,16 @@ const saveUsername = async () => {
   }
 };
 // 保存设置（修改密码）
-const saveSettings = async () => {
+const saveSettings = () => {
   if (!settingsForm.value.oldPassword || !settingsForm.value.newPassword) {
     ElMessage.warning('请填写完整的密码信息');
     return;
   }
+  showSaveConfirm.value = true;
+};
 
+// 确认保存设置
+const confirmSaveSettings = async () => {
   try {
     const res = await modifyPwdService({
       oldPassword: settingsForm.value.oldPassword,
@@ -499,12 +622,18 @@ const saveSettings = async () => {
     });
     
     if (res.code === 200) {
-      ElMessage.success('密码修改成功');
-      settingsForm.value.oldPassword = '';
-      settingsForm.value.newPassword = '';
-      settingsForm.value.confirmPassword = '';
-      userInfoStore.removeUserInfo();
-      router.push('/login');
+      showSaveConfirm.value = false;
+      showSuccessTips.value = true;
+      
+      // 3秒后自动关闭成功提示并跳转
+      setTimeout(() => {
+        showSuccessTips.value = false;
+        settingsForm.value.oldPassword = '';
+        settingsForm.value.newPassword = '';
+        settingsForm.value.confirmPassword = '';
+        userInfoStore.removeUserInfo();
+        router.push('/login');
+      }, 3000);
     } else {
       ElMessage.error(res.msg || '修改失败');
     }
@@ -512,6 +641,22 @@ const saveSettings = async () => {
     console.error('修改密码失败:', error);
     ElMessage.error('修改失败，请稍后重试');
   }
+  showSaveConfirm.value = false;
+};
+
+// 取消保存设置
+const cancelSaveSettings = () => {
+  showSaveConfirm.value = false;
+};
+
+// 关闭成功提示
+const closeSuccessTips = () => {
+  showSuccessTips.value = false;
+  settingsForm.value.oldPassword = '';
+  settingsForm.value.newPassword = '';
+  settingsForm.value.confirmPassword = '';
+  userInfoStore.removeUserInfo();
+  router.push('/login');
 };
 
 const props = defineProps({
@@ -592,12 +737,9 @@ const handleDelete = async (friend) => {
     const res = await deleteFriend(friend.id);
     if (res.code === 200) {
       ElMessage.success('删除好友成功');
-      // 删除本地联系人数据
       contactStore.removeContact(friend.id);
-      // 触发刷新好友列表事件
+      emitter.emit('refresh-friend-contact-list');
       emitter.emit('refresh-friend-list');
-      // 触发刷新会话列表事件
-      emitter.emit('refresh-contact-list');
     } else {
       ElMessage.error(res.msg || '删除好友失败');
     }
@@ -692,33 +834,32 @@ const handleGroupMoreClick = async (group, event) => {
 
 // 处理退出登录
 const handleLogout = () => {
-  ElMessageBox.confirm(
-    '确定要退出系统吗？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
+  showLogoutConfirm.value = true;
+};
+
+// 确认退出登录
+const confirmLogout = async () => {
+  try {
+    const token = userInfo.value.token;
+    const res = await logoutService(token);
+    
+    if (res.code === 200) {
+      userInfoStore.removeUserInfo(); // 这里会清空token并断开WebSocket
+      router.push('/login');
+      ElMessage.success('退出成功');
+    } else {
+      ElMessage.error(res.msg || '退出失败');
     }
-  )
-    .then(async () => {
-      try {
-        const token = userInfo.value.token;
-        const res = await logoutService(token);
-        
-        if (res.code === 200) {
-          userInfoStore.removeUserInfo(); // 这里会清空token并断开WebSocket
-          router.push('/login');
-          ElMessage.success('退出成功');
-        } else {
-          ElMessage.error(res.msg || '退出失败');
-        }
-      } catch (error) {
-      }
-    })
-    .catch(() => {
-      // 取消退出
-    });
+  } catch (error) {
+    console.error('退出登录失败:', error);
+    ElMessage.error('退出失败，请稍后重试');
+  }
+  showLogoutConfirm.value = false;
+};
+
+// 取消退出登录
+const cancelLogout = () => {
+  showLogoutConfirm.value = false;
 };
 // 添加新的响应式变量
 const showAddFriendDialog = ref(false);
@@ -753,17 +894,14 @@ const handleFriendRequestSent = () => {
 const handleStartChat = (user) => {
   // 先关闭好友管理弹窗
   showFriendsDialog.value = false;
+  
   // 直接跳转到聊天界面
   router.push(`/chat/${user.id}`);
 };
 
 const showManageGroupsDialog = ref(false);
 const manageGroupsTab = ref('groups');
-const mockRequests = ref([
-  { id: 1, username: '用户1', groupName: '开发群', time: '2024-04-01 10:00' },
-  { id: 2, username: '用户2', groupName: '设计群', time: '2024-04-02 11:00' },
-  { id: 3, username: '用户3', groupName: '产品群', time: '2024-04-03 12:00' },
-]);
+
 
 const ManageIcon = {
   name: 'ManageIcon',
@@ -797,14 +935,61 @@ const groupsPage = ref(1);
 const groupsPageSize = ref(5);
 const requestsPage = ref(1);
 const requestsPageSize = ref(5);
+const requestsTotal = ref(0);
+const groupJoinRequests = ref([]);
 
+const fetchGroupJoinRequests = async () => {
+  try {
+    const res = await getOtherJoinGroupApplyList({
+      page: requestsPage.value,
+      pageSize: requestsPageSize.value
+    });
+    if (res.code === 200) {
+      groupJoinRequests.value = res.data.records.map(item => ({
+        id: item.id,
+        uid: item.uid,
+        username: item.username,
+        avatar: item.avatar || 'https://placeholder.svg?height=40&width=40&text=U',
+        msg: item.msg,
+        roomId: item.roomId,
+        groupName: item.name,
+        time: item.updateTime,
+        status: item.status // 新增 status 字段
+      }));
+      requestsTotal.value = res.data.total;
+    }
+  } catch (e) {
+    groupJoinRequests.value = [];
+    requestsTotal.value = 0;
+  }
+};
+
+watch([requestsPage, requestsPageSize], fetchGroupJoinRequests);
+
+onMounted(() => {
+  fetchGroupJoinRequests();
+});
 const pagedGroups = computed(() => {
   const start = (groupsPage.value - 1) * groupsPageSize.value;
   return groups.value ? groups.value.slice(start, start + groupsPageSize.value) : [];
 });
+const filterGroupId = ref('');
+const filterDateRange = ref([]);
 const pagedRequests = computed(() => {
-  const start = (requestsPage.value - 1) * requestsPageSize.value;
-  return mockRequests.value.slice(start, start + requestsPageSize.value);
+  let filtered = groupJoinRequests.value;
+  // 按群聊id筛选
+  if (filterGroupId.value) {
+    filtered = filtered.filter(req => req.roomId == filterGroupId.value);
+  }
+  // 按时间筛选
+  if (filterDateRange.value && filterDateRange.value.length === 2) {
+    const [start, end] = filterDateRange.value;
+    filtered = filtered.filter(req => {
+      const t = req.time ? req.time.slice(0, 10) : '';
+      return t >= start && t <= end;
+    });
+  }
+  return filtered;
 });
 
 // 添加新的状态用于管理群聊弹窗中的群聊详情
@@ -907,10 +1092,28 @@ async function handleAvatarUpload() {
     avatarUploading.value = false;
   }
 }
+
+const requestLoadingMap = ref({}); // 记录每个申请的loading状态
+
+const handleRequestAction = async (req, status) => {
+  console.log(req, status);
+  if (requestLoadingMap.value[req.id]) return;
+  requestLoadingMap.value = { ...requestLoadingMap.value, [req.id]: true };
+  try {
+    await handleGroupJoinApply({ id: req.id, status });
+    ElMessage.success(status === 1 ? '已同意' : '已拒绝');
+    await fetchGroupJoinRequests();
+  } catch (e) {
+    ElMessage.error('操作失败');
+  } finally {
+    requestLoadingMap.value = { ...requestLoadingMap.value, [req.id]: false };
+  }
+};
 </script>
 
 <style scoped>
 @import '/src/assets/styles/level.css';
+
 
 .personal-center {
   padding: 0 8%;
@@ -1171,6 +1374,31 @@ async function handleAvatarUpload() {
   margin-right: 4px;
 }
 
+/* 退出登录确认弹窗样式 */
+.logout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  0% {
+    opacity: 0;
+  }
+  100% {
+    opacity: 1;
+  }
+}
+
 .content-box {
   border-radius: 12px;
   padding: 24px;
@@ -1255,9 +1483,6 @@ async function handleAvatarUpload() {
   margin-bottom: 12px;
 }
 
-:deep(.el-popover) {
-  background: transparent;
-}
 
 .popover-title {
   font-size: 16px;
@@ -1395,6 +1620,12 @@ async function handleAvatarUpload() {
 .request-group {
   font-size: 12px;
   color: var(--light-secondary-text);
+}
+
+.request-msg {
+  font-size: 12px;
+  color: var(--light-text);
+  margin-top: 4px;
 }
 
 .request-time {
@@ -1837,5 +2068,66 @@ async function handleAvatarUpload() {
 :deep(.el-button:active) {
   background-color: var(--el-color-primary-dark-2);
   color: white;
+}
+.filter-section {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin:0 25px;
+}
+:deep(.filter-section .el-select),
+:deep(.filter-section .el-date-editor) {
+  border-radius: 8px !important;
+  min-height: 32px !important;
+  font-size: 14px !important;
+  box-shadow: 0 1px 6px rgba(64,158,255,0.06);
+}
+:deep(.filter-section .el-input__wrapper) {
+  border-radius: 8px !important;
+  min-height: 32px !important;
+}
+:deep(.filter-section .el-input__inner) {
+  font-size: 14px !important;
+}
+.request-meta {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  min-width: 120px;
+  margin-right: 16px;
+  margin-left: 12px;
+}
+.request-msg-glass {
+  background: rgba(180, 180, 180, 0.18);
+  color: #888;
+  font-size: 13px;
+  border-radius: 10px;
+  padding: 6px 14px;
+  margin-bottom: 6px;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  box-shadow: 0 2px 8px rgba(180,180,180,0.08);
+  text-align: center;
+  min-width: 80px;
+  max-width: 180px;
+  word-break: break-all;
+}
+.request-time-blue {
+  color: #409eff;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  text-shadow: 0 1px 4px rgba(64,158,255,0.08);
+}
+.group-name-link {
+  color: #409eff;
+  text-decoration: underline;
+  font-weight: 500;
+  cursor: pointer;
+}
+.request-user {
+  font-weight: bold;
 }
 </style>

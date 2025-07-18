@@ -15,7 +15,7 @@
            <!-- 签到按钮 -->
     <div class="sign-btn-row" v-if="!loading">
       <DangerButton
-        class="sign-btn"
+      style="margin-top: 1px;"
         :type="isTodaySignedIn ? 'success' : 'danger'"
         :disabled="isTodaySignedIn"
         @click="handleSignInBtn"
@@ -208,6 +208,7 @@ function handleSignInBtn() {
   height: 38px;
   line-height: 38px;
   margin: 0 auto;
+  margin-bottom: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -295,9 +296,7 @@ function handleSignInBtn() {
   margin-top: 24px;
   margin-bottom: 0;
 }
-.sign-btn {
-  min-width: 50px !important;
-}
+
 
 :deep(.signed-highlight) {
   background: #1AAD19 !important;
@@ -315,6 +314,5 @@ function handleSignInBtn() {
 .sign-btn-row {
   display: flex;
   justify-content: center;
-  margin-bottom: 12px;
 }
 </style> 

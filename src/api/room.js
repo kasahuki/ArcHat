@@ -52,3 +52,32 @@ export const applyJoinGroup = (data) => {
     msg: data.msg
   });
 };
+// 获取我发送的群聊申请列表
+export const getMyGroupApplyList = (basePageReq) => {
+  return request.post('/room/list/myApply', basePageReq);
+}
+
+export const getOtherJoinGroupApplyList = (basePageReq) => {
+  return request.post('/room/list/otherApply', basePageReq);
+}
+
+
+// // 获取我收到的群聊邀请
+// export const getMyReceivedGroupInvitation = (basePageReq) => {
+//   return request.post('/room/apply/myReceivedGroupInvitation', basePageReq);
+// }
+
+// 修改群聊申请留言
+export const updateGroupApplyMsg = (data) => {
+
+  return request.post('/room/apply/modifyMsg', data);
+}
+
+
+
+// 处理入群申请
+export const handleGroupJoinApply = (data) => {
+  // data: { id, status }
+  return request.post('/room/apply/dealWith', data);
+}
+

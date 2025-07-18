@@ -9,50 +9,76 @@
         </div>
       </div>
       
-      <div class="guide-section">
-        <div class="guide-item">
-          <el-icon class="guide-icon"><User /></el-icon>
-          <div class="guide-text">
-            <h3>好友聊天</h3>
-            <p>在左侧好友列表中选择好友开始私聊</p>
+      <div class="guide-and-visitor-container">
+        <div class="guide-section">
+          <div class="guide-item">
+            <el-icon class="guide-icon"><User /></el-icon>
+            <div class="guide-text">
+              <h3>好友聊天</h3>
+              <p>在左侧好友列表中选择好友开始私聊</p>
+            </div>
+          </div>
+          
+          <div class="guide-item">
+            <el-icon class="guide-icon"><ChatDotRound /></el-icon>
+            <div class="guide-text">
+              <h3>群组聊天</h3>
+              <p>在群聊列表中选择群聊开始聊天</p>
+            </div>
+          </div>
+          
+          <div class="guide-item">
+            <el-icon class="guide-icon"><Setting /></el-icon>
+            <div class="guide-text">
+              <h3>个人中心</h3>
+              <p>在右下角设置中自定义您的个人信息</p>
+            </div>
           </div>
         </div>
-        
-        <div class="guide-item">
-          <el-icon class="guide-icon"><ChatDotRound /></el-icon>
-          <div class="guide-text">
-            <h3>群组聊天</h3>
-            <p>在群聊列表中选择群聊开始聊天</p>
-          </div>
-        </div>
-        
-        <div class="guide-item">
-          <el-icon class="guide-icon"><Setting /></el-icon>
-          <div class="guide-text">
-            <h3>个人中心</h3>
-            <p>在右下角设置中自定义您的个人信息</p>
-          </div>
-        </div>
+
+       
       </div>
 
       <div class="features-section">
-        <div class="feature-tag">实时通讯</div>
-        <div class="feature-tag">敏感词过滤</div>
-        <div class="feature-tag">AI助手</div>
+        <div class="feature-tag" @click="handleManageArchive"> 管理档案</div>
+        <div class="feature-tag" @click="handleViewMail">查看邮件</div>
+        <div class="feature-tag" @click="handleAIAssistant">AI助手</div> 
+     
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
-import { User, ChatDotRound, Setting } from '@element-plus/icons-vue'
+import { User, ChatDotRound, Setting, UserFilled } from '@element-plus/icons-vue'
 import WaterButton from '@/components/WaterButton.vue'
 import { useRouter } from 'vue-router'
+import { onMounted, ref, computed } from 'vue'
+import { useUserInfoStore } from '@/stores/user'
+
 const router = useRouter()
+const userInfoStore = useUserInfoStore()
+const userInfo = computed(() => userInfoStore.userInfo)
+
 const handleLoginDelay = () => {
   setTimeout(() => {
     router.push('/login')
-  }, 1500)
+  }, 1000)
+}
+
+const visitorCount = ref(0)
+
+
+const handleManageArchive = () => {
+  router.push('/archives')
+}
+
+const handleViewMail = () => {
+  router.push('/mail')
+} 
+
+const handleAIAssistant = () => {
+  router.push('/aichat')
 }
 </script>
 
@@ -115,11 +141,18 @@ const handleLoginDelay = () => {
   color: var(--text-color-secondary);
 }
 
+.guide-and-visitor-container {
+  display: flex;
+  gap: 40px;
+  align-items: flex-start;
+  margin-bottom: 30px;
+}
+
 .guide-section {
   display: flex;
   flex-direction: column;
   gap: 16px;
-  margin-bottom: 30px;
+  flex: 1;
 }
 
 .guide-item {
@@ -165,6 +198,7 @@ const handleLoginDelay = () => {
   justify-content: center;
   gap: 10px;
   flex-wrap: wrap;
+  margin-bottom: 30px;
 }
 
 .feature-tag {
@@ -176,38 +210,14 @@ const handleLoginDelay = () => {
   font-weight: 500;
   opacity: 0.9;
   transition: opacity 0.3s ease;
+  cursor: pointer;
 }
 
 .feature-tag:hover {
   opacity: 1;
 }
 
-/* 暗色模式适配 */
-.dark-mode .welcome-image {
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2));
-  opacity: 0.7;
-}
 
-.dark-mode .welcome-image:hover {
-  opacity: 0.9;
-}
 
-@media (max-width: 768px) {
-  .start-content {
-    padding: 0 16px;
-  }
-  
-  .welcome-section h1 {
-    font-size: 24px;
-  }
-  
-  .guide-item {
-    padding: 10px;
-  }
-  
-  .welcome-image {
-    width: 100px;
-    height: 100px;
-  }
-}
+
 </style> 

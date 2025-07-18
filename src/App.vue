@@ -2,6 +2,7 @@
 import {RouterLink, RouterView} from 'vue-router'
 import { useUserInfoStore } from '@/stores/user';
 import { onMounted } from 'vue';
+import { callAddVisitorOncePerDay } from '@/api/uv';
 
 const userInfoStore = useUserInfoStore();
 
@@ -12,8 +13,10 @@ onMounted(() => {
     hasToken: !!userInfoStore.userInfo?.token,
     token: userInfoStore.userInfo?.token?.substring(0, 20) + '...'
   });
+
   
   if (userInfoStore.userInfo?.token) {
+   
     console.log('开始建立 WebSocket 连接');
     userInfoStore.connectWebSocket();
   } else {

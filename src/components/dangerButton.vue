@@ -1,5 +1,5 @@
 <template>
-  <button :class="['custom-button', `custom-button--${type}`]">
+  <button type="button" :class="['custom-button', `custom-button--${type}`]">
     <span class="shadow"></span>
     <span class="edge"></span>
     <span class="front text">
@@ -13,7 +13,12 @@ defineProps({
   type: {
     type: String,
     default: 'danger',
-    validator: (value) => ['danger', 'primary', 'text', 'success', 'warning'].includes(value)
+    validator: (value) => [
+      'danger', 'primary', 'text', 'success', 'warning',
+      'black', 'yellow', 'purple', 'pink', 'orange', 'cyan', 'teal',
+      'gradient-blue', 'gradient-purple', 'gradient-green', 'gradient-orange',
+      'gradient-pink', 'gradient-cyan', 'gradient-teal', 'gradient-yellow'
+    ].includes(value)
   }
 });
 </script>
@@ -179,5 +184,225 @@ defineProps({
 
 .custom-button:focus:not(:focus-visible) {
  outline: none;
+}
+
+/* 黑色按钮样式 */
+.custom-button--black .edge {
+  background: linear-gradient(
+    to left,
+    hsl(0deg 0% 16%) 0%,
+    hsl(0deg 0% 32%) 8%,
+    hsl(0deg 0% 32%) 92%,
+    hsl(0deg 0% 16%) 100%
+  );
+}
+
+.custom-button--black .front {
+  background: hsl(0deg 0% 47%);
+}
+
+/* 黄色按钮样式 */
+.custom-button--yellow .edge {
+  background: linear-gradient(
+    to left,
+    hsl(60deg 100% 16%) 0%,
+    hsl(60deg 100% 32%) 8%,
+    hsl(60deg 100% 32%) 92%,
+    hsl(60deg 100% 16%) 100%
+  );
+}
+
+.custom-button--yellow .front {
+  background: hsl(60deg 100% 47%);
+  color: #333;
+}
+
+/* 紫色按钮样式 */
+.custom-button--purple .edge {
+  background: linear-gradient(
+    to left,
+    hsl(270deg 100% 16%) 0%,
+    hsl(270deg 100% 32%) 8%,
+    hsl(270deg 100% 32%) 92%,
+    hsl(270deg 100% 16%) 100%
+  );
+}
+
+.custom-button--purple .front {
+  background: hsl(270deg 100% 47%);
+}
+
+/* 粉色按钮样式 */
+.custom-button--pink .edge {
+  background: linear-gradient(
+    to left,
+    hsl(330deg 100% 16%) 0%,
+    hsl(330deg 100% 32%) 8%,
+    hsl(330deg 100% 32%) 92%,
+    hsl(330deg 100% 16%) 100%
+  );
+}
+
+.custom-button--pink .front {
+  background: hsl(330deg 100% 47%);
+}
+
+/* 橙色按钮样式 */
+.custom-button--orange .edge {
+  background: linear-gradient(
+    to left,
+    hsl(25deg 100% 16%) 0%,
+    hsl(25deg 100% 32%) 8%,
+    hsl(25deg 100% 32%) 92%,
+    hsl(25deg 100% 16%) 100%
+  );
+}
+
+.custom-button--orange .front {
+  background: hsl(25deg 100% 47%);
+}
+
+/* 青色按钮样式 */
+.custom-button--cyan .edge {
+  background: linear-gradient(
+    to left,
+    hsl(180deg 100% 16%) 0%,
+    hsl(180deg 100% 32%) 8%,
+    hsl(180deg 100% 32%) 92%,
+    hsl(180deg 100% 16%) 100%
+  );
+}
+
+.custom-button--cyan .front {
+  background: hsl(180deg 100% 47%);
+}
+
+/* 蓝绿色按钮样式 */
+.custom-button--teal .edge {
+  background: linear-gradient(
+    to left,
+    hsl(175deg 100% 16%) 0%,
+    hsl(175deg 100% 32%) 8%,
+    hsl(175deg 100% 32%) 92%,
+    hsl(175deg 100% 16%) 100%
+  );
+}
+
+.custom-button--teal .front {
+  background: hsl(175deg 100% 47%);
+}
+
+/* 渐变色按钮样式 */
+.custom-button--gradient-blue .edge {
+  background: linear-gradient(
+    to left,
+    hsl(210deg 100% 16%) 0%,
+    hsl(210deg 100% 32%) 8%,
+    hsl(210deg 100% 32%) 92%,
+    hsl(210deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-blue .front {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.custom-button--gradient-purple .edge {
+  background: linear-gradient(
+    to left,
+    hsl(270deg 100% 16%) 0%,
+    hsl(270deg 100% 32%) 8%,
+    hsl(270deg 100% 32%) 92%,
+    hsl(270deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-purple .front {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.custom-button--gradient-green .edge {
+  background: linear-gradient(
+    to left,
+    hsl(140deg 70% 16%) 0%,
+    hsl(140deg 70% 32%) 8%,
+    hsl(140deg 70% 32%) 92%,
+    hsl(140deg 70% 16%) 100%
+  );
+}
+
+.custom-button--gradient-green .front {
+  background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+}
+
+.custom-button--gradient-orange .edge {
+  background: linear-gradient(
+    to left,
+    hsl(25deg 100% 16%) 0%,
+    hsl(25deg 100% 32%) 8%,
+    hsl(25deg 100% 32%) 92%,
+    hsl(25deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-orange .front {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.custom-button--gradient-pink .edge {
+  background: linear-gradient(
+    to left,
+    hsl(330deg 100% 16%) 0%,
+    hsl(330deg 100% 32%) 8%,
+    hsl(330deg 100% 32%) 92%,
+    hsl(330deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-pink .front {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+}
+
+.custom-button--gradient-cyan .edge {
+  background: linear-gradient(
+    to left,
+    hsl(180deg 100% 16%) 0%,
+    hsl(180deg 100% 32%) 8%,
+    hsl(180deg 100% 32%) 92%,
+    hsl(180deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-cyan .front {
+  background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);
+}
+
+.custom-button--gradient-teal .edge {
+  background: linear-gradient(
+    to left,
+    hsl(175deg 100% 16%) 0%,
+    hsl(175deg 100% 32%) 8%,
+    hsl(175deg 100% 32%) 92%,
+    hsl(175deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-teal .front {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.custom-button--gradient-yellow .edge {
+  background: linear-gradient(
+    to left,
+    hsl(60deg 100% 16%) 0%,
+    hsl(60deg 100% 32%) 8%,
+    hsl(60deg 100% 32%) 92%,
+    hsl(60deg 100% 16%) 100%
+  );
+}
+
+.custom-button--gradient-yellow .front {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+  color: #333;
 }
 </style>

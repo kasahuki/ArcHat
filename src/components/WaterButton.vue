@@ -26,12 +26,11 @@
       <div class="outline"></div>
       <div class="content">
         <span class="char state-1">
-          <span style="--i: 1" data-label="S">S</span>
-          <span style="--i: 2" data-label="i">i</span>
+          <span style="--i: 1" data-label="L">L</span>
+          <span style="--i: 2" data-label="o">o</span>
           <span style="--i: 3" data-label="g">g</span>
-          <span style="--i: 4" data-label="n">n</span>
-          <span style="--i: 5" data-label="U">U</span>
-          <span style="--i: 6" data-label="p">p</span>
+          <span style="--i: 4" data-label="i">i</span>
+          <span style="--i: 5" data-label="n">n</span>
         </span>
 
         <div class="icon">
