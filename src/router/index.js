@@ -5,6 +5,7 @@ import Chat from '../views/chat/Chat.vue'
 import UserHub from '../views/user/UserHub.vue'
 import MailBox from '../views/mail/MailBox.vue'
 import silent from '@/views/silent.vue'
+import NoticeCenter from '@/views/mail/NoticeCenter.vue'
 const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
     routes: [
@@ -15,7 +16,7 @@ const router = createRouter({
             redirect: '/chat',
             children: [
                 {
-                    path: '/chat',
+                    path: 'chat',
                     name: 'Chat',
                     component: () => import('@/views/chat/Chat.vue'),
                     children: [
@@ -32,27 +33,33 @@ const router = createRouter({
                     ]
                 },
                 {
-                    path: '/UserHub',
+                    path: 'UserHub',
                     component: UserHub,
                     name: 'UserHub',
                 },
                 {
-                    path: '/mail',
+                    path: 'mail',
                     component: MailBox,
                     name: 'mail',
+                   
                 },
                 {
-                    path: '/aichat',
+                    path: 'noticecenter',
+                    component: NoticeCenter,
+                    name: 'noticecenter',
+                },
+                {
+                    path: 'aichat',
                     name: 'AiChat',
                     component: () => import('@/views/AiChatView.vue')
                 },
                 {
-                    path: '/archives',
+                    path: 'archives',
                     name: 'Archives',
                     component: () => import('@/views/ArchivesView.vue')
                 },
                 {
-                    path: '/groupchat/:id',
+                    path: 'groupchat/:id',
                     name: 'GroupChat',
                     component: () => import('@/views/chat/GroupChat.vue')
                 },
@@ -68,6 +75,7 @@ const router = createRouter({
             componnet: silent,
             name: 'silent'
         },
+   
  
         // 404页面
         {

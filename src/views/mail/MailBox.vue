@@ -1,7 +1,7 @@
 <template>
   <div class="mailbox-container">
     <div class="mailbox-header">
-      <h2>通知中心</h2>
+      <h2 style="display: flex; align-items: center; gap: 8px;"><span style="color: wheat;"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Gridicons by Automattic - https://github.com/Automattic/gridicons/blob/trunk/LICENSE.md --><path fill="currentColor" d="M12 2C6.477 2 2 6.477 2 12s4.477 10 10 10s10-4.477 10-10S17.523 2 12 2m1 15h-2v-2h2zm0-4h-2l-.5-6h3z"/></svg></span>通知中心</h2>
     </div>
     
     <div class="mailbox-content">
@@ -628,11 +628,11 @@ const handleCancelEditMsg = () => {
 }
 
 .mail-section {
-  background: var(--light-sidebar-bg);
-  border-radius: 8px;
-  padding: 16px;
-  margin-bottom: 16px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--bg-color) !important;
+  border-radius: 16px;
+  padding: 22px 20px;
+  margin-bottom: 24px;
+  transition: box-shadow 0.3s cubic-bezier(.4,0,.2,1);
 }
 
 .section-header {
@@ -790,6 +790,9 @@ const handleCancelEditMsg = () => {
   gap: 6px;
   align-items: center;
 }
+.dark-mode .mail-section {
+  background: var(--dark-sidebar-bg) !important;
+}
 
 :deep(.el-tabs__item) {
   font-size: 13px;
@@ -813,10 +816,6 @@ const handleCancelEditMsg = () => {
   color: var(--dark-text);
 }
 
-.dark-mode .mail-section {
-  background: var(--dark-sidebar-bg);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-}
 
 .dark-mode .section-title h3 {
   color: var(--dark-text);

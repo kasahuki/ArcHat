@@ -95,7 +95,6 @@ body {
   padding: 16px;
   display: flex;
   align-items: center;
-  border-bottom: 1px solid var(--light-border);
   justify-content: space-between;
   min-height: 56px;
   flex-shrink: 0;
@@ -113,8 +112,11 @@ body {
   display: flex;
   align-items: center;
   gap: 12px;
+  color: #222;
 }
-
+.dark-mode .sidebar-header .inbox-title {
+  color: #fff;
+}
 .sidebar-header .inbox-title img {
   vertical-align: middle;
   width: 50px;
@@ -180,7 +182,7 @@ body {
 .switch-bar {
   display: flex;
   gap: 8px;
-  background: var(--sidebar-bg);
+  background: var(--bg-color);
   padding: 4px;
   border-radius: 8px;
   box-shadow: 
@@ -269,13 +271,16 @@ body {
   margin-bottom: 12px;
   border-radius: 8px;
   cursor: pointer;
-  color: #64d47c !important;
+  color: rgb(134, 131, 131);
 }
 
 
+
 .nav-item.active {
-  background-color: rgb(24, 79, 116);
+  background: rgba(3, 151, 250, 0.7);
   color: white;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
 .nav-badge {

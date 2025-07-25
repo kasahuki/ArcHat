@@ -30,14 +30,14 @@
             <span class="time-divider">{{ formatMessageDate(new Date(msg.time)) }}</span>
           </div>
           <div :class="['chat-message-item', msg.side]">
-            <el-avatar v-if="msg.side === 'left'" :size="48" class="user-avatar"
+              <el-avatar v-if="msg.side === 'left'" :size="40" class="user-avatar"
               :src="msg.avatar && msg.avatar.trim() ? msg.avatar : undefined" :alt="msg.username"
               @click="(e) => handleAvatarClick(e, msg)" style="cursor:pointer;">
               <template v-if="!msg.avatar || !msg.avatar.trim()">
                 {{ msg.username ? msg.username.charAt(0) : '' }}
               </template>
             </el-avatar>
-            <div class="msg-main">
+            <div class="msg-main" @contextmenu.prevent="handleRightClick(msg, $event)">
               <!-- 新增：左侧消息显示用户名 -->
               <div v-if="msg.side === 'left'"
                    class="msg-username"
@@ -64,7 +64,7 @@
                 <div class="chat-bubble" v-html="msg.text"></div>
               </template>
             </div>
-            <el-avatar v-if="msg.side === 'right'" :size="48" class="user-avatar" :src="userStore.userInfo.avatar" />
+            <el-avatar v-if="msg.side === 'right'" :size="40" class="user-avatar" :src="userStore.userInfo.avatar" />
           </div>
         </div>
       </template>
@@ -112,7 +112,9 @@
       </UserDetailPopup>
     </div>
     <!-- 底部输入区 -->
-    <div class="message-input-container" style="position: relative;">
+    <div class="message-input-container" style="position: relative;"
+         @dragover.prevent
+         @drop.prevent="handleDropFile">
       <!-- 多图预览区，悬浮在输入框上方 -->
       <div v-if="imagePreviewUrls.length" class="image-preview-floating">
         <div v-for="(url, idx) in imagePreviewUrls" :key="url" class="image-preview-item">
@@ -187,6 +189,22 @@
         </template>
       </el-alert>
     </div>
+    <RightKeyPop
+      v-if="showRightKeyPop"
+      ref="rightKeyPopRef"
+      :style="{
+        position: 'fixed',
+        left: rightKeyPopPosition.x + 'px',
+        top: rightKeyPopPosition.y + 'px',
+        zIndex: 99999
+      }"
+      :items="menuItems "
+      @click.stop
+      @mousedown.stop
+      @contextmenu.stop
+      @close="showRightKeyPop = false"
+    />
+    <ExpDialog v-if="showCopySuccess" :visible="showCopySuccess" title="复制成功" @update:visible="showCopySuccess = false" />
   </div>
 </template>
 <script setup>
@@ -216,6 +234,8 @@ import WaitConnLoading from '@/components/WaitConnLoading.vue';
 import { uploadImageFile } from '@/utils/fileHandler';
 import { ElMessage } from 'element-plus';
 import { getFileSvg } from '@/utils/filesIcons';
+import RightKeyPop from '@/components/RightKeyPop.vue';
+import ExpDialog from '@/components/ExpDialog.vue'
 const isReconnecting = ref(false);
 const route = useRoute();
 const userStore = useUserInfoStore();
@@ -245,7 +265,50 @@ const currentGroup = ref({
   members: [],
   onlineCount: 0
 });
+const menuItems = ref([
+{
+      key: 'share',
+      label: '分享',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20"viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M17 22q-1.25 0-2.125-.875T14 19q0-.15.075-.7L7.05 14.2q-.4.375-.925.588T5 15q-1.25 0-2.125-.875T2 12t.875-2.125T5 9q.6 0 1.125.213t.925.587l7.025-4.1q-.05-.175-.062-.337T14 5q0-1.25.875-2.125T17 2t2.125.875T20 5t-.875 2.125T17 8q-.6 0-1.125-.213T14.95 7.2l-7.025 4.1q.05.175.063.338T8 12t-.012.363t-.063.337l7.025 4.1q.4-.375.925-.587T17 16q1.25 0 2.125.875T20 19t-.875 2.125T17 22"/></svg>',
+      checked: true,
+  onClick: () => { 
+    console.log('share')
+   },
+  separatorAfter: false
+},
+{
+  key: 'delete',
+  label: '删除',
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M9 17h2V8H9zm4 0h2V8h-2zm-8 4V6H4V4h5V3h6v1h5v2h-1v15z"/></svg>',
+  danger:true,
+  checked: false,
+  onClick: () => { 
+    console.log('delete')
+  },
+  separatorAfter: false
+},
+{
+  key: 'recall',
+  label: '撤回',
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" viewBox="0 0 24 24"><!-- Icon from Solar by 480 Design - https://creativecommons.org/licenses/by/4.0/ --><path fill="currentColor" d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10" opacity=".5"/><path fill="currentColor" d="M10.564 7.461a.75.75 0 1 1 .871 1.22l-3.221 2.302a1.25 1.25 0 0 0 0 2.034l3.221 2.301a.75.75 0 1 1-.871 1.22l-3.222-2.3a2.75 2.75 0 0 1 0-4.476z"/><path fill="currentColor" d="M16.5 15.132V8.869a1 1 0 0 0-1.555-.832l-4.697 3.131a1 1 0 0 0 0 1.664l4.697 3.132a1 1 0 0 0 1.555-.832"/></svg>',
+  danger:true,
+  checked: false,
+  onClick: () => { 
+    console.log('recall')
+  },
+  separatorAfter: true
+},
 
+{
+  key: 'copy',
+  label: '复制',
+  icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20"  viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M4 23q-.825 0-1.412-.587T2 21V7h2v14h11v2zm4-4q-.825 0-1.412-.587T6 17V3q0-.825.588-1.412T8 1h7l6 6v10q0 .825-.587 1.413T19 19zm6-11h5l-5-5z"/></svg>',
+  checked: false,
+  onClick: () => { 
+    handleCopy(rightKeyPopMsg.value)
+  },
+  separatorAfter: false
+}])
 // 新增：在线人数计算属性
 const onlineCount = computed(() => {
   return (currentGroup.value.members || []).filter(member => member.status === 1).length;
@@ -263,6 +326,12 @@ const showUserDetailPopup = ref(false);
 const userDetailPopupPosition = ref({ x: 0, y: 0 });
 const userDetail = ref({});
 const userDetailLoading = ref(false);
+
+// 新增：弹窗的响应式控制变量
+const showRightKeyPop = ref(false)
+const rightKeyPopPosition = ref({ x: 0, y: 0 })
+const rightKeyPopMsg = ref(null)
+const rightKeyPopRef = ref(null)
 
 // 从父组件props获取好友列表
 const props = defineProps({
@@ -398,7 +467,7 @@ const loadGroupMessages = async (reset = false) => {
           fromUid,
           side: fromUid === userStore.userInfo.uid ? 'right' : 'left',
           avatar: member.avatar || msg.fromUser?.avatar || '',
-          username: member.name || msg.fromUser?.username || '群成员',
+          username: member.name || msg.fromUser?.username || 'UnKnown',
           role: member.role,
           status: member.status
         };
@@ -892,6 +961,137 @@ async function sendFileMessages() {
   filePreviewList.value = [];
 }
 
+function handleRightClick(msg, event) {
+  // 动态生成右键菜单
+  const baseItems = [
+    {
+      key: 'share',
+      label: '分享',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20"viewBox="0 0 24 24"><path fill="currentColor" d="M17 22q-1.25 0-2.125-.875T14 19q0-.15.075-.7L7.05 14.2q-.4.375-.925.588T5 15q-1.25 0-2.125-.875T2 12t.875-2.125T5 9q.6 0 1.125.213t.925.587l7.025-4.1q-.05-.175-.062-.337T14 5q0-1.25.875-2.125T17 2t2.125.875T20 5t-.875 2.125T17 8q-.6 0-1.125-.213T14.95 7.2l-7.025 4.1q.05.175.063.338T8 12t-.012.363t-.063.337l7.025 4.1q.4-.375.925-.587T17 16q1.25 0 2.125.875T20 19t-.875 2.125T17 22"/></svg>',
+      checked: true,
+      onClick: () => { console.log('share') },
+      separatorAfter: false
+    },
+    {
+      key: 'delete',
+      label: '删除',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" viewBox="0 0 24 24"><path fill="currentColor" d="M9 17h2V8H9zm4 0h2V8h-2zm-8 4V6H4V4h5V3h6v1h5v2h-1v15z"/></svg>',
+      danger: true,
+      checked: false,
+      onClick: () => { console.log('delete') },
+      separatorAfter: false
+    },
+    {
+      key: 'copy',
+      label: '复制',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20"  viewBox="0 0 24 24"><path fill="currentColor" d="M4 23q-.825 0-1.412-.587T2 21V7h2v14h11v2zm4-4q-.825 0-1.412-.587T6 17V3q0-.825.588-1.412T8 1h7l6 6v10q0 .825-.587 1.413T19 19zm6-11h5l-5-5z"/></svg>',
+      checked: false,
+      onClick: () => { handleCopy(msg) },
+      separatorAfter: false
+    }
+  ]
+  if (msg.side === 'right') {
+    baseItems.splice(2, 0, {
+      key: 'recall',
+      label: '撤回',
+      icon: '<svg xmlns="http://www.w3.org/2000/svg" width="20" viewBox="0 0 24 24"><path fill="currentColor" d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10s-4.477 10-10 10" opacity=".5"/><path fill="currentColor" d="M10.564 7.461a.75.75 0 1 1 .871 1.22l-3.221 2.302a1.25 1.25 0 0 0 0 2.034l3.221 2.301a.75.75 0 1 1-.871 1.22l-3.222-2.3a2.75 2.75 0 0 1 0-4.476z"/><path fill="currentColor" d="M16.5 15.132V8.869a1 1 0 0 0-1.555-.832l-4.697 3.131a1 1 0 0 0 0 1.664l4.697 3.132a1 1 0 0 0 1.555-.832"/></svg>',
+      danger: true,
+      checked: false,
+      onClick: () => { console.log('recall') },
+      separatorAfter: true
+    })
+  }
+  menuItems.value = baseItems
+  if (msg.side === 'right' || msg.side === 'left') {
+    showRightKeyPop.value = true
+    rightKeyPopPosition.value = { x: event.clientX, y: event.clientY }
+    rightKeyPopMsg.value = msg
+    nextTick(() => {
+      if (rightKeyPopRef.value) rightKeyPopRef.value.focus && rightKeyPopRef.value.focus()
+    })
+  } else {
+    showRightKeyPop.value = false
+  }
+}
+
+function closeRightKeyPop(e) {
+  // 如果菜单没显示，直接返回
+  if (!showRightKeyPop.value) return
+  // 如果点击在菜单内部，不关闭
+  if (rightKeyPopRef.value && rightKeyPopRef.value.$el?.contains(e.target)) return
+  showRightKeyPop.value = false
+}
+onMounted(() => {
+  document.addEventListener('mousedown', closeRightKeyPop)
+})
+onBeforeUnmount(() => {
+  document.removeEventListener('mousedown', closeRightKeyPop)
+})
+
+const showCopySuccess = ref(false)
+
+function handleCopy(msg) {
+  let text = ''
+  if (msg.type === 1) { // 文本
+    text = typeof msg.text === 'string' ? msg.text : ''
+  } else if (msg.type === 4 && msg.text?.fileName) {
+    text = msg.text.url
+  } else if (msg.type === 3 && msg.text?.url) {
+    text = msg.text.url
+  } else {
+    text = '[暂不支持复制该类型]'
+  }
+  if (text) {
+    navigator.clipboard.writeText(text).then(() => {
+      showCopySuccess.value = true
+      setTimeout(() => { showCopySuccess.value = false }, 1500)
+    })
+  }
+}
+
+// 拖拽文件上传
+function handleDropFile(e) {
+  const files = Array.from(e.dataTransfer.files);
+  for (const file of files) {
+    const ext = file.name.split('.').pop().toLowerCase();
+    // 图片类型
+    if ([
+      'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg'
+    ].includes(ext)) {
+      const url = URL.createObjectURL(file);
+      imagePreviewUrls.value.push(url);
+      selectedImages.value.push(file);
+      continue;
+    }
+    // 视频类型
+    if ([
+      'mp4', 'avi', 'mov', 'wmv', 'flv', 'mkv', 'webm', 'mpg', 'mpeg', '3gp', 'rmvb', 'rm', 'asf', 'ts', 'm4v'
+    ].includes(ext)) {
+      // 可扩展：视频预览
+      filePreviewList.value.push({
+        file,
+        url: '',
+        isImage: false,
+        fileName: file.name,
+        fileTypeClass: 'file-video',
+        fileIcon: '🎬',
+        previewKey: file.name + '-' + file.size + '-' + Date.now()
+      });
+      continue;
+    }
+    // 其他文档类型
+    filePreviewList.value.push({
+      file,
+      url: '',
+      isImage: false,
+      fileName: file.name,
+      fileTypeClass: getFileTypeClass(ext),
+      fileIcon: getFileTypeIcon(ext),
+      previewKey: file.name + '-' + file.size + '-' + Date.now()
+    });
+  }
+}
+
 </script>
 
 <style scoped src="@/assets/styles/chat.css"></style>
@@ -1135,7 +1335,9 @@ async function sendFileMessages() {
   align-items: flex-start;
   width: 100%;
 }
-
+.msg-main{
+  cursor: pointer;
+}
 .user-avatar {
   flex-shrink: 0;
   margin: 0 4px ;
@@ -1163,7 +1365,7 @@ async function sendFileMessages() {
 
 .owner-name {
   /* 动态金色渐变文字，兼容日夜模式 */
-  background: linear-gradient(90deg, #c5870c, #FFB300, #e6df1b, #6e6219, #6d5512, #c49c25);
+  background: linear-gradient(90deg, #c5870c, #f0d807, #e9ec0c, #ec650a, #d15813, #ec2409);
   background-size: 200% 200%;
   background-clip: text;
   -webkit-background-clip: text;
@@ -1463,8 +1665,8 @@ body.dark-theme .ws-reconnect-mask {
   background: none;
   border-radius: 0;
   box-shadow: none;
-  padding: 15px;
-  min-height: 100px;
+  padding: 0;
+  min-height: 48px;
   max-width: 94%;
   overflow-x: auto;
 }

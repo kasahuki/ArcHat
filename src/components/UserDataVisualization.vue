@@ -16,9 +16,7 @@
       <div class="chart-card">
         <div class="chart-header">
           <h4 class="chart-title">好友聊天排行</h4>
-          <el-tooltip content="显示与好友的聊天记录数量排行" placement="top">
-            <el-icon class="info-icon"><InfoFilled /></el-icon>
-          </el-tooltip>
+         
         </div>
         <div class="chart-content">
           <v-chart 
@@ -37,9 +35,7 @@
       <div class="chart-card">
         <div class="chart-header">
           <h4 class="chart-title">活跃度统计</h4>
-          <el-tooltip content="显示最近30天的每日上线次数" placement="top">
-            <el-icon class="info-icon"><InfoFilled /></el-icon>
-          </el-tooltip>
+        
         </div>
         <div class="chart-content">
           <v-chart 
@@ -57,9 +53,7 @@
       <div class="chart-card full-width">
         <div class="chart-header">
           <h4 class="chart-title">好友等级分布</h4>
-          <el-tooltip content="显示好友中1-6级的占比分布" placement="top">
-            <el-icon class="info-icon"><InfoFilled /></el-icon>
-          </el-tooltip>
+       
         </div>
         <div class="chart-content">
           <v-chart 
@@ -97,6 +91,7 @@ import {
   getFriendChatRanking 
 } from '@/api/analytics';
 import emitter from '@/utils/eventBus';
+import { calculateLevel } from '@/utils/exp';
 
 // 注册 ECharts 组件
 use([
@@ -115,6 +110,10 @@ const props = defineProps({
   userId: {
     type: String,
     required: true
+  },
+  friendList: {
+    type: Array,
+    default: () => []
   }
 });
 
@@ -144,14 +143,30 @@ const friendChatData = ref([
 ]);
 
 const activityData = ref([]);
-const friendLevelData = ref([
-  { level: '1级', count: 15, percentage: 25 },
-  { level: '2级', count: 12, percentage: 20 },
-  { level: '3级', count: 10, percentage: 16.7 },
-  { level: '4级', count: 8, percentage: 13.3 },
-  { level: '5级', count: 9, percentage: 15 },
-  { level: '6级', count: 6, percentage: 10 }
-]);
+// 统计好友等级分布
+const friendLevelData = computed(() => {
+  // 统计每个等级的人数
+  const levelCount = {};
+  let total = 0;
+  props.friendList.forEach(friend => {
+    const level = calculateLevel(friend.exep || 0);
+    const key = level + '级';
+    levelCount[key] = (levelCount[key] || 0) + 1;
+    total++;
+  });
+  // 只显示1-8级
+  const result = [];
+  for (let i = 1; i <= 8; i++) {
+    const key = i + '级';
+    const count = levelCount[key] || 0;
+    result.push({
+      level: key,
+      count,
+      percentage: total ? Math.round((count / total) * 1000) / 10 : 0
+    });
+  }
+  return result;
+});
 
 // 生成活跃度数据
 const generateActivityData = () => {
@@ -306,7 +321,6 @@ const activityOption = computed(() => ({
 // 好友等级分布饼图配置
 const friendLevelOption = computed(() => ({
   title: {
- 
     left: 'center',
     textStyle: {
       fontSize: 16,
@@ -320,7 +334,11 @@ const friendLevelOption = computed(() => ({
   legend: {
     orient: 'vertical',
     left: 'left',
-    data: friendLevelData.value.map(item => item.level)
+    data: friendLevelData.value.map(item => item.level),
+    textStyle: {
+      fontSize: 16,
+      color: getLegendTextColor()
+    }
   },
   series: [
     {
@@ -344,7 +362,17 @@ const friendLevelOption = computed(() => ({
       },
       label: {
         show: true,
-        formatter: '{b}: {c}人 ({d}%)'
+        formatter: '{b}: {c}人 ({d}%)',
+        fontSize: 16,
+        fontWeight: 'bold',
+        color: getLabelTextColor(),
+        fontFamily: 'PingFang SC, Microsoft YaHei, Arial',
+        rich: {
+          b: {
+            color: getLabelTextColor(),
+            fontFamily: 'PingFang SC, Microsoft YaHei, Arial',
+          }
+        }
       }
     }
   ]
@@ -358,11 +386,20 @@ const getLevelColor = (level) => {
     '3级': '#45B7D1',
     '4级': '#96CEB4',
     '5级': '#FFEAA7',
-    '6级': '#DDA0DD'
+    '6级': '#DDA0DD',
+    '7级': '#FFA500', // 新增7级橙色
+    '8级': '#8A2BE2'  // 新增8级蓝紫色
   };
   return colors[level] || '#409EFF';
 };
 
+// 饼图标签和图例颜色适配日夜间模式
+function getLabelTextColor() {
+  return '#0077ff';
+}
+function getLegendTextColor() {
+  return '#00000';
+}
 
 
 // 事件处理
@@ -558,15 +595,6 @@ onUnmounted(() => {
   margin: 0;
 }
 
-.info-icon {
-  color: #909399;
-  cursor: pointer;
-  transition: color 0.3s ease;
-}
-
-.info-icon:hover {
-  color: #409EFF;
-}
 
 .chart-content {
   flex: 1 1 0;
@@ -614,13 +642,7 @@ onUnmounted(() => {
   color: #e5eaf3;
 }
 
-.dark-mode .info-icon {
-  color: #a3a6ad;
-}
 
-.dark-mode .info-icon:hover {
-  color: #6ca6ff;
-}
 
 /* 响应式设计 */
 @media (max-width: 768px) {

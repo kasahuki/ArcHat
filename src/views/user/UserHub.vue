@@ -78,12 +78,16 @@
                     <div class="stat-label">好友</div>
                   </div>
                   <div class="stat-item">
-                    <div class="stat-value">0</div>
+                    <div class="stat-value">{{groupList.length}}</div>
                     <div class="stat-label">群聊</div>
                   </div>
                   <div class="stat-item">
                     <div class="stat-value">{{userExp}}</div>
                     <div class="stat-label">积分值</div>
+                  </div>
+                  <div class="stat-item">
+                    <div class="stat-value">{{ formatArcAge(userInfo.createTime) }}</div>
+                    <div class="stat-label">Arcage</div>
                   </div>
                 </div>
               </div>
@@ -202,7 +206,7 @@
       </div>
 
       <!-- 第四部分：数据统计 -->
-      <UserDataVisualization :user-id="userInfo.username" />
+      <UserDataVisualization :user-id="userInfo.username" :friend-list="friendList" />
 
       <!-- 好友管理弹窗 -->
       <FullScreenDialog v-model:visible="showFriendsDialog" title="好友管理">
@@ -464,7 +468,7 @@
           icon-bg-color="#fef2f2"
           icon-color="#ef4444"
           confirm-button-color="#ef4444"
-          width="350px"
+          :width="'350px'"
           @confirm="confirmLogout"
           @cancel="cancelLogout"
         />
@@ -1109,6 +1113,20 @@ const handleRequestAction = async (req, status) => {
     requestLoadingMap.value = { ...requestLoadingMap.value, [req.id]: false };
   }
 };
+
+function formatArcAge(createTime) {
+  if (!createTime) return ''
+  const now = new Date()
+  const created = new Date(createTime)
+  const diffMs = now - created
+  if (isNaN(diffMs) || diffMs < 0) return ''
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+  if (diffDays < 1) return '今天'
+  if (diffDays < 365) return diffDays + '天'
+  const years = Math.floor(diffDays / 365)
+  const leftDays = diffDays % 365
+  return years + '年' + (leftDays > 0 ? leftDays + '天' : '')
+}
 </script>
 
 <style scoped>
@@ -2129,5 +2147,35 @@ const handleRequestAction = async (req, status) => {
 }
 .request-user {
   font-weight: bold;
+}
+
+/* 头像美化，兼容 el-avatar、el-image、img，使用 :deep 选择器 */
+:deep(.el-avatar),
+:deep(.el-image),
+:deep(img.user-avatar),
+:deep(.user-avatar-img) {
+  border-radius: 50%;
+  border: 3px solid transparent;
+  background: linear-gradient(135deg, #6c63ff 0%, #409eff 100%) border-box;
+  box-shadow: 0 4px 18px 0 rgba(64, 158, 255, 0.18), 0 1.5px 6px 0 rgba(64, 158, 255, 0.10);
+  padding: 3px;
+  background-clip: padding-box, border-box;
+  background-origin: border-box;
+  position: relative;
+}
+:deep(.el-avatar img),
+:deep(.el-image__inner),
+:deep(img.user-avatar),
+:deep(.user-avatar-img) {
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 8px 0 #e0e7ef inset;
+}
+.dark-mode :deep(.el-avatar),
+.dark-mode :deep(.el-image),
+.dark-mode :deep(img.user-avatar),
+.dark-mode :deep(.user-avatar-img) {
+  background: linear-gradient(135deg, #23263a 0%, #409eff 100%) border-box;
+  box-shadow: 0 4px 18px 0 #00000033, 0 1.5px 6px 0 #409eff33;
 }
 </style>

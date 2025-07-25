@@ -280,6 +280,13 @@
             <Calendar style="color: #fff;" />
           </el-icon>
         </el-button>
+        <!-- 消息中心icon按钮 -->
+        <el-button circle class="calendar-btn" @click="router.push('/noticecenter')" data-tooltip="消息中心"
+          :style="calendarBtnStyle">
+          <el-icon>
+            <Bell style="color: #fff;" />
+          </el-icon>
+        </el-button>
       </div>
       <!-- #endregion -->
     </el-container>
@@ -364,7 +371,14 @@
     <!-- ExpDialog经验值弹窗 -->
     <ExpDialog v-model:visible="showExpDialog" :title="expDialogTitle" @close="showExpDialog = false" />
     <!-- #endregion -->
+    <!-- 退出登录确认弹窗 -->
+  
   </div>
+  <div v-if="showLogoutConfirm" class="logout-overlay" @click="cancelLogout">
+      <WorningTips title="退出登录" message="确定要退出系统吗？退出后需要重新登录。" confirm-text="退出" cancel-text="取消" icon-bg-color="#fef2f2"
+        icon-color="#ef4444" confirm-button-color="#ef4444" :width="'350px'" @confirm="confirmLogout"
+        @cancel="cancelLogout" />
+    </div>
 </template>
 
 <script setup>
@@ -372,7 +386,7 @@
 import { ref, onMounted, onUnmounted, watch, computed, h, defineComponent } from 'vue';
 import {
   ChatDotRound, Setting, Sunny, Moon,
-  ArrowLeft, Plus, User, UserFilled, Message,
+  ArrowLeft, Plus, User, UserFilled, Message, Bell,
   Close, Minus, FullScreen, Search, Position,
   Calendar, Folder
 } from '@element-plus/icons-vue';
@@ -399,6 +413,7 @@ import { fetchVisitorCount, callAddVisitorOncePerDay } from '@/api/uv';
 import DangerButton from '@/components/dangerButton.vue';
 import { uploadImageFile } from '@/utils/fileHandler';
 import { loadMoreList } from '@/utils/paginatedListLoader';
+import WorningTips from '@/components/WorningTips.vue';
 const groupAvatarFile = ref(null);
 const groupAvatarPreview = ref('');
 const groupAvatarInput = ref(null);
@@ -845,36 +860,35 @@ const handleShowSearchDialog = (type) => {
 // #endregion
 
 // #region 用户操作处理
+const showLogoutConfirm = ref(false);
 const handleLogout = () => {
-  ElMessageBox.confirm(
-    '确定要退出登录吗？',
-    '提示',
-    {
-      confirmButtonText: '确定',
-      cancelButtonText: '取消',
-      type: 'warning',
-    }
-  )
-    .then(async () => {
-      try {
-        const token = userInfo.value.token;
-        const res = await logoutService(token);
+  showLogoutConfirm.value = true;
+};
 
-        if (res.code === 200) {
-          userInfoStore.removeUserInfo();
-          router.push('/login');
-          ElMessage.success('退出成功');
-        } else {
-          ElMessage.error(res.msg || '退出失败');
-        }
-      } catch (error) {
-        console.error('退出错误:', error);
-        ElMessage.error('退出失败，请稍后重试');
-      }
-    })
-    .catch(() => {
-      // 取消退出
-    });
+
+// 确认退出登录
+const confirmLogout = async () => {
+  try {
+    const token = userInfo.value.token;
+    const res = await logoutService(token);
+    
+    if (res.code === 200) {
+      userInfoStore.removeUserInfo(); // 这里会清空token并断开WebSocket
+      router.push('/login');
+      ElMessage.success('退出成功');
+    } else {
+      ElMessage.error(res.msg || '退出失败');
+    }
+  } catch (error) {
+    console.error('退出登录失败:', error);
+    ElMessage.error('退出失败，请稍后重试');
+  }
+  showLogoutConfirm.value = false;
+};
+
+// 取消退出登录
+const cancelLogout = () => {
+  showLogoutConfirm.value = false;
 };
 
 const handleMinimize = () => {
@@ -916,15 +930,98 @@ const AnthropicIcon = defineComponent({
   }
 });
 
+const ChatIcon = defineComponent({
+  name: 'ChatIcon',
+  render() {
+    return h('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '32',
+      height: '32',
+      viewBox: '0 0 24 24'
+    }, [
+      h('defs', null, [
+        h('mask', { id: 'solarChatRoundDotsBold0' }, [
+          h('g', { fill: 'none' }, [
+            h('path', {
+              fill: '#fff',
+              d: 'M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2S2 6.477 2 12c0 1.6.376 3.112 1.043 4.453c.178.356.237.763.134 1.148l-.595 2.226a1.3 1.3 0 0 0 1.591 1.592l2.226-.596a1.63 1.63 0 0 1 1.149.133A9.96 9.96 0 0 0 12 22'
+            }),
+            h('path', {
+              fill: '#000',
+              d: 'M15 12a1 1 0 1 0 2 0a1 1 0 0 0-2 0m-4 0a1 1 0 1 0 2 0a1 1 0 0 0-2 0m-4 0a1 1 0 1 0 2 0a1 1 0 0 0-2 0'
+            })
+          ])
+        ])
+      ]),
+      h('path', {
+        fill: 'currentColor',
+        d: 'M0 0h24v24H0z',
+        mask: 'url(#solarChatRoundDotsBold0)'
+      })
+    ])
+  }
+});
+
+const MailIcon = defineComponent({
+  name: 'MailIcon',
+  render() {
+    return h('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '32',
+      height: '32',
+      viewBox: '0 0 24 24'
+    }, [
+      h('path', {
+        fill: 'currentColor',
+        d: 'M19 22q-1.65 0-2.825-1.175T15 18v-4.5q0-1.05.725-1.775T17.5 11t1.775.725T20 13.5V18h-2v-4.5q0-.2-.15-.35T17.5 13t-.35.15t-.15.35V18q0 .825.588 1.413T19 20t1.413-.587T21 18v-4h2v4q0 1.65-1.175 2.825T19 22M3 18q-.825 0-1.412-.587T1 16V4q0-.825.588-1.412T3 2h16q.825 0 1.413.588T21 4v6h-3.5q-1.45 0-2.475 1.025T14 13.5V18zm8-7l8-5V4l-8 5l-8-5v2z'
+      })
+    ])
+  }
+});
+
+const UserIcon = defineComponent({
+  name: 'UserIcon',
+  render() {
+    return h('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '32',
+      height: '32',
+      viewBox: '0 0 24 24'
+    }, [
+      h('path', {
+        fill: 'currentColor',
+        d: 'M5.85 17.1q1.275-.975 2.85-1.537T12 15t3.3.563t2.85 1.537q.875-1.025 1.363-2.325T20 12q0-3.325-2.337-5.663T12 4T6.337 6.338T4 12q0 1.475.488 2.775T5.85 17.1M12 13q-1.475 0-2.488-1.012T8.5 9.5t1.013-2.488T12 6t2.488 1.013T15.5 9.5t-1.012 2.488T12 13m0 9q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22'
+      })
+    ])
+  }
+});
+
+const ArchivesIcon = defineComponent({
+  name: 'ArchivesIcon',
+  render() {
+    return h('svg', {
+      xmlns: 'http://www.w3.org/2000/svg',
+      width: '32',
+      height: '32',
+      viewBox: '0 0 24 24'
+    }, [
+      h('path', {
+        fill: 'currentColor',
+        d: 'M5 2.25h14A2.75 2.75 0 0 1 21.75 5v3a.75.75 0 0 1-.75.75h-.25V19A2.75 2.75 0 0 1 18 21.75H6A2.75 2.75 0 0 1 3.25 19V8.75H3A.75.75 0 0 1 2.25 8V5A2.75 2.75 0 0 1 5 2.25m-1.25 5h16.5V5c0-.69-.56-1.25-1.25-1.25H5c-.69 0-1.25.56-1.25 1.25zm6.75 3.5a.75.75 0 0 0 0 1.5h3a.75.75 0 0 0 0-1.5z'
+      })
+    ])
+  }
+});
+
 const getIconComponent = (icon) => {
   const iconMap = {
-    chat: ChatDotRound,
-    mail: Message,
-    user: Setting,
+    chat: ChatIcon,
+    mail: MailIcon,
+    user: UserIcon,
     aichat: AnthropicIcon,
-    archives: Folder
+    archives: ArchivesIcon
   };
-  return iconMap[icon] || ChatDotRound;
+  return iconMap[icon] || ChatIcon;
 };
 // #endregion
 
@@ -1175,6 +1272,20 @@ function getGroupSenderName(group) {
 
 
 <style scoped>
+.logout-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.3s ease-out;
+}
 .visitor-tag {
   position: absolute;
   right: 10px;
@@ -1609,6 +1720,7 @@ function getGroupSenderName(group) {
 .conversation-item.has-unread {
   animation: flash-item 1s linear infinite alternate;
 }
+
 :deep(.el-badge__content--danger) {
   scale: 1.1;
   background: linear-gradient(145deg, #ff4e6a 0%, #e00d3a 60%, #ffb3c0 100%);
@@ -1621,14 +1733,15 @@ function getGroupSenderName(group) {
   box-shadow:
     0 2px 8px 0 rgba(224, 13, 58, 0.18),
     0 4px 16px 0 rgba(255, 80, 120, 0.18),
-    inset 0 2px 8px 0 rgba(255,255,255,0.45),
-    inset 0 8px 16px 0 rgba(255,255,255,0.18);
+    inset 0 2px 8px 0 rgba(255, 255, 255, 0.45),
+    inset 0 8px 16px 0 rgba(255, 255, 255, 0.18);
   /* 轻微边框以增强毛玻璃感 */
-  border: 1px solid rgba(255,255,255,0.18);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   /* 反光高光 */
   position: relative;
   overflow: visible;
 }
+
 :deep(.el-badge__content--danger)::after {
   content: "";
   position: absolute;
@@ -1636,7 +1749,7 @@ function getGroupSenderName(group) {
   left: 8px;
   width: 60%;
   height: 30%;
-  background: linear-gradient(120deg, rgba(255,255,255,0.65) 0%, rgba(255,255,255,0.12) 100%);
+  background: linear-gradient(120deg, rgba(255, 255, 255, 0.65) 0%, rgba(255, 255, 255, 0.12) 100%);
   border-radius: 50%;
   filter: blur(1px);
   pointer-events: none;
@@ -1800,7 +1913,6 @@ function getGroupSenderName(group) {
 }
 
 .calendar-btn {
-  margin-right: 8px;
   transition: background 0.3s;
 }
 
