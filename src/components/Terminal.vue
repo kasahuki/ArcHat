@@ -1,6 +1,6 @@
 <template>
 
-<div class="card">
+
   <div class="wrap">
     <div class="terminal">
       <hgroup class="head">
@@ -55,7 +55,7 @@
       </div>
     </div>
   </div>
-</div>
+
 
 </template>
 <script setup>
@@ -80,12 +80,9 @@ function copyCmd() {
 }
 </script>
 <style scoped>
-.card {
-  padding: 1rem;
-  overflow: hidden;
-  min-width: 344px;
-}
+
 .wrap {
+  min-width: 344px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
@@ -123,6 +120,7 @@ function copyCmd() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color : #fff;
 }
 .title > svg {
   height: 18px;

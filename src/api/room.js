@@ -61,12 +61,6 @@ export const getOtherJoinGroupApplyList = (basePageReq) => {
   return request.post('/room/list/otherApply', basePageReq);
 }
 
-
-// // 获取我收到的群聊邀请
-// export const getMyReceivedGroupInvitation = (basePageReq) => {
-//   return request.post('/room/apply/myReceivedGroupInvitation', basePageReq);
-// }
-
 // 修改群聊申请留言
 export const updateGroupApplyMsg = (data) => {
 
@@ -80,4 +74,35 @@ export const handleGroupJoinApply = (data) => {
   // data: { id, status }
   return request.post('/room/apply/dealWith', data);
 }
+
+// 将成员踢出群聊
+export const removeMember = (data) => {
+  // data: { uid: Long, roomId: Long }
+  return request.post('/room/removeMember', data);
+}
+
+// 修改群聊信息
+export const modifyGroup = (data) => {
+  // data: { roomId, name, groupDesc }
+  return request.post('/room/group/modify', data);
+}
+
+// 授权/撤销群成员权限
+export const authorizeMember = (data) => {
+  // data: { uid, groupId, role }
+  return request.post('/room/auth', data);
+}
+
+// 退出群聊
+export const outGroup = (roomId) => {
+  return request.get(`/room/outGroup/${roomId}`);
+}
+
+// 解散群聊
+export const dismissGroup = (roomId) => {
+  return request.delete(`/room/group/${roomId}`);
+}
+
+
+
 

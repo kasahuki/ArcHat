@@ -53,9 +53,7 @@
         <div v-if="!isSidebarCollapse" class="search-container">
           <el-input placeholder="Find a conversation" v-model="searchQuery" clearable class="custom-search-input">
             <template #prefix>
-              <el-icon>
-                <Search />
-              </el-icon>
+             <span style="color: #6466f5;"><svg xmlns="http://www.w3.org/2000/svg" width="12"  viewBox="0 0 24 24"><!-- Icon from Google Material Icons by Material Design Authors - https://github.com/material-icons/material-icons/blob/master/LICENSE --><path fill="currentColor" d="M20.94 11A8.994 8.994 0 0 0 13 3.06V1h-2v2.06A8.994 8.994 0 0 0 3.06 11H1v2h2.06A8.994 8.994 0 0 0 11 20.94V23h2v-2.06A8.994 8.994 0 0 0 20.94 13H23v-2zM12 19c-3.87 0-7-3.13-7-7s3.13-7 7-7s7 3.13 7 7s-3.13 7-7 7"/></svg></span>
             </template>
             <template #suffix>
               <el-icon class="search-send-icon">
@@ -225,22 +223,29 @@
           <template #dropdown>
             <el-dropdown-menu>
               <el-dropdown-item @click="handleShowSearchDialog('friend')">
-                <el-icon>
+                <DangerButton type="gradient-purple" style="margin-top:12px;" >
+                  <el-icon>
                   <User />
                 </el-icon>
                 添加好友
+              </DangerButton>
+               
               </el-dropdown-item>
               <el-dropdown-item @click="handleShowSearchDialog('group')">
-                <el-icon>
+                <DangerButton type="gradient-green" style="margin-top:12px;" >
+                  <el-icon>
                   <UserFilled />
                 </el-icon>
                 添加群聊
+              </DangerButton>
               </el-dropdown-item>
               <el-dropdown-item @click="handleShowCreateGroupDialog">
-                <el-icon>
+                <DangerButton type="gradient-orange" style="margin-top:12px;" >
+                  <el-icon>
                   <Plus />
                 </el-icon>
                 创建群聊
+              </DangerButton>
               </el-dropdown-item>
             </el-dropdown-menu>
           </template>
@@ -374,7 +379,7 @@
     <!-- 退出登录确认弹窗 -->
   
   </div>
-  <div v-if="showLogoutConfirm" class="logout-overlay" @click="cancelLogout">
+  <div v-if="showLogoutConfirm" class="warning-overlay" @click="cancelLogout">
       <WorningTips title="退出登录" message="确定要退出系统吗？退出后需要重新登录。" confirm-text="退出" cancel-text="取消" icon-bg-color="#fef2f2"
         icon-color="#ef4444" confirm-button-color="#ef4444" :width="'350px'" @confirm="confirmLogout"
         @cancel="cancelLogout" />
@@ -778,9 +783,15 @@ onMounted(() => {
     console.log('收到 refresh-friend-contact-list 事件');
     fetchContactList();
   });
-  emitter.on('refresh-group-contact-list', () => {
-    console.log('收到 refresh-group-contact-list 事件');
-    fetchGroupListRaw();
+  emitter.on('refresh-group-contact-list', (data) => {
+    console.log('收到 refresh-group-contact-list 事件', data);
+    // 如果传入了具体的roomId，只更新该群聊；否则更新所有群聊
+    if (data && (data.message.roomId || data.message.id)) {
+      const roomId = data.message.roomId || data.message.id;
+      updateSpecificGroupMessage(roomId);
+    } else {
+      fetchGroupListRaw();
+    }
   });
   // 监听刷新好友列表事件
   emitter.on('refresh-friend-list', () => {
@@ -1253,6 +1264,72 @@ const getGroupLatestMessage = async (group) => {
   }
 };
 
+// 优化的群聊消息更新函数 - 只更新特定群聊的最新消息和未读数量
+const updateSpecificGroupMessage = async (roomId) => {
+  if (!roomId) return;
+  
+  try {
+    // 找到对应的群聊
+    const groupIndex = groupList.value.findIndex(group => group.roomId === roomId);
+    if (groupIndex === -1) {
+      console.log('未找到对应的群聊，可能需要重新加载群聊列表');
+      // 如果找不到群聊，可能是新加入的群，此时才调用完整的重新加载
+      await fetchGroupListRaw();
+      return;
+    }
+    
+    // 获取该群聊的未读数量（使用contactId参数）
+    const unreadRes = await getUnreadMsgCnt({ 
+      page: 1, 
+      pageSize: 10, // 获取多个可能的未读记录
+      contactId: roomId 
+    });
+    
+    if (unreadRes.code === 200) {
+    
+      
+      // 重新获取群聊列表来获取最新的lastMsgId（只获取少量数据进行对比）
+      const groupRes = await getGroupList({ 
+        page: 1, 
+        pageSize: 20 // 获取前20个群聊进行查找
+      });
+      
+      if (groupRes.code === 200 && groupRes.data.records) {
+        // 在返回的群聊列表中找到对应的群聊
+        const updatedGroup = groupRes.data.records.find(group => 
+          String(group.roomId) === String(roomId)
+        );
+        
+        if (updatedGroup) {
+          // 检查lastMsgId是否有变化
+          const oldLastMsgId = groupList.value[groupIndex].lastMsgId;
+          const newLastMsgId = updatedGroup.lastMsgId;
+          
+          if (oldLastMsgId !== newLastMsgId) {
+            // 更新群聊的最新消息ID和时间
+            groupList.value[groupIndex].lastMsgId = newLastMsgId;
+            groupList.value[groupIndex].lastMsgTime = updatedGroup.lastMsgTime;
+            
+            // 获取最新消息内容
+            if (newLastMsgId) {
+              await getGroupLatestMessage(groupList.value[groupIndex]);
+            }
+          }
+        }
+      }
+      
+      // 更新联系人存储
+      contactStore.setGroupChats(groupList.value);
+      
+      console.log(`群聊 ${roomId} 消息已更新，未读数量: ${unreadCount}`);
+    }
+  } catch (error) {
+    console.error('更新群聊消息失败:', error);
+    // 如果单独更新失败，降级到完整重新加载
+    await fetchGroupListRaw();
+  }
+};
+
 function getGroupSenderName(group) {
   const fromUid = groupMessageSenders.value.get(group.roomId);
   if (!fromUid) return '';
@@ -1272,20 +1349,7 @@ function getGroupSenderName(group) {
 
 
 <style scoped>
-.logout-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 10000;
-  animation: fadeIn 0.3s ease-out;
-}
+
 .visitor-tag {
   position: absolute;
   right: 10px;
@@ -2019,12 +2083,13 @@ function getGroupSenderName(group) {
   cursor: pointer;
   margin: 12px auto;
   transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(33, 36, 226, 0.1);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  color: #6466f5;
 }
 
 .sidebar-toggle-btn:hover {

@@ -1,4 +1,5 @@
 <template>
+  
   <div class="archives-root">
     <div class="archives-title">
       ArcArchives
@@ -6,7 +7,7 @@
         FlashThoughts
       </span>
     </div>
-
+  
     <!-- 闪念画板 -->
     <div class="drawing-board-outer">
       <div class="drawing-board-apple" :class="{ fullscreen: isFullscreen }">
@@ -35,23 +36,62 @@
     </div>
 
 
-    <!-- 闪念md卡片编辑器 -->
+        <!-- 闪念md卡片编辑器 -->
     <div class="drawing-board-outer">
-      <div class="drawing-board-apple" >
-      <div class="drawing-board-header-apple">
-        <h1><el-icon style="margin-right:8px;"><Edit /></el-icon>Flash Editor</h1>
-        <div>
-          <DangerButton :type="showEditor ? 'danger' : 'success'" @click=";">
-            {{ showEditor ? '隐藏' : '展开' }}
-          </DangerButton>
-          <DangerButton type="primary" @click=";" style="margin-left: 12px;">
-            新增
-          </DangerButton>
+      <div class="drawing-board-apple">
+        <div class="drawing-board-header-apple">
+          <h1><el-icon style="margin-right:8px;"><Edit /></el-icon>Flash Editor</h1>
+          <div>
+            <DangerButton :type="showEditor ? 'danger' : 'success'" @click="showEditor = !showEditor">
+              {{ showEditor ? '隐藏' : '展开' }}
+            </DangerButton>
+          </div>
         </div>
-      </div>
-      </div>
-    </div>
+        <transition name="fade">
+          <div v-if="showEditor" class="flash-editor-wrapper">
+            <FlashEditor @save="handleSaveNote" />
+          </div>
+        </transition>
+        <transition name="fade">
+          <div v-if="showEditor" class="notes-grid">
+            <div v-for="note in notes" :key="note.id" class="note-card" :ref="el => setNoteCardRef(el, note.id)" @click="editNote(note)">
+              <div class="note-content" v-html="note.content"></div>
+              <div class="note-actions">
+                <button @click.stop="editNote(note)" class="edit-note-btn" title="编辑">
+                  <svg width="14" height="14" viewBox="0 0 24 24"><path fill="currentColor" d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+                </button>
+                <button @click.stop="deleteNote(note.id)" class="delete-note-btn" title="删除">×</button>
+              </div>
+            </div>
+          </div>
+        </transition>
+    
+    <!-- 编辑弹窗 -->
+    <NoteEditModal 
+      :visible="showEditModal" 
+      :note="editingNote" 
+      @close="closeEditModal" 
+      @save="handleEditSave" 
+    />
 
+ 
+      </div>
+      
+    </div>
+       <!-- 删除确认弹窗 -->
+       <div class="warning-overlay" v-if="showWarningTip">
+    <WorningTips
+     
+
+      :title="'删除确认'"
+      :message="'您确定要删除这条笔记吗？此操作不可撤销。'"
+      :confirm-text="'删除'"
+      :cancel-text="'取消'"
+      :confirm-button-color="'red'"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
+    </div>
     <!-- Todo List 板块 -->
     <div class="drawing-board-outer">
       <div class="drawing-board-apple" >
@@ -115,22 +155,96 @@
 
 </template>
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue';
+import { ref, computed, onMounted, onUnmounted, onUpdated, onBeforeUpdate, nextTick } from 'vue';
 import DangerButton from '@/components/dangerButton.vue';
 import EditorDrawer from '@/components/EditorDrawer.vue';
 import ResourceDrawer from '@/components/ResourceDrawer.vue';
 import TodoList from '@/components/TodoList.vue';
 import { useTodoStore } from '@/stores/todo.js';
 import { EditPen, Edit, List, Files, Search } from '@element-plus/icons-vue';
+import FlashEditor from '@/components/FlashEditor.vue';
+import NoteEditModal from '@/components/NoteEditModal.vue';
+import WorningTips from '@/components/WorningTips.vue';
 import MacWindowControls from '@/components/MacWindowControls.vue';
 import Terminal from '@/components/Terminal.vue';
+import ArcMessage from '@/utils/ArcMessage';
 const showDrawingBoard = ref(false);
 const isFullscreen = ref(false);
 const showResourceDrawer = ref(false);
 const showTodoList = ref(true);
+const showEditor = ref(true);
+const notes = ref([]);
+const editingNote = ref(null);
+const showEditModal = ref(false);
+const showWarningTip = ref(false);
+const noteToDeleteId = ref(null);
+
+const getNoteSizeFromContent = (content) => {
+  const text = new DOMParser().parseFromString(content, 'text/html').body.textContent || '';
+  const length = text.length;
+  if (length < 50) return 'small';
+  if (length < 150) return 'medium';
+  return 'large';
+};
+
+onMounted(() => {
+  const savedNotes = localStorage.getItem('flash-notes');
+  if (savedNotes) {
+    const parsedNotes = JSON.parse(savedNotes);
+    // 为旧笔记添加 size 属性
+    notes.value = parsedNotes.map(note => ({
+      ...note,
+      size: note.size || getNoteSizeFromContent(note.content)
+    }));
+    // 更新 localStorage
+    localStorage.setItem('flash-notes', JSON.stringify(notes.value));
+  }
+});
 
 const todoStore = useTodoStore();
 const cmd = ref('https://www.arcwater.com/');
+
+// --- 笔记卡片溢出检测逻辑 ---
+const noteCardRefs = ref({});
+const setNoteCardRef = (el, id) => {
+  if (el) {
+    noteCardRefs.value[id] = el;
+  }
+};
+
+onBeforeUpdate(() => {
+  noteCardRefs.value = {};
+});
+
+onMounted(() => {
+  checkAllCardsOverflow();
+});
+
+onUpdated(() => {
+  checkAllCardsOverflow();
+});
+
+const checkAllCardsOverflow = () => {
+  nextTick(() => {
+    for (const id in noteCardRefs.value) {
+      const cardEl = noteCardRefs.value[id];
+      if (cardEl) {
+        const contentEl = cardEl.querySelector('.note-content');
+        if (contentEl) {
+          // CSS handles max-height, JS just checks if it overflowed to add the gradient class.
+          const isOverflowing = contentEl.scrollHeight > contentEl.clientHeight;
+          if (isOverflowing) {
+            cardEl.classList.add('is-overflowing');
+          } else {
+            cardEl.classList.remove('is-overflowing');
+          }
+        }
+      }
+    }
+  });
+};
+
+
 
 // 新增：arcwater搜索框内容
 const arcwaterSearch = ref('');
@@ -186,6 +300,54 @@ function handleDeleteTodo(id) {
 function handleReorderTodo(newList) {
   todoStore.reorderTodos(newList);
 }
+
+const handleSaveNote = (content) => {
+  const newNote = { 
+    id: Date.now(), 
+    content,
+  };
+  notes.value.unshift(newNote);
+  localStorage.setItem('flash-notes', JSON.stringify(notes.value));
+  ArcMessage.success('闪念记录成功');
+};
+
+const deleteNote = (noteId) => {
+  noteToDeleteId.value = noteId;
+  showWarningTip.value = true;
+};
+
+const confirmDelete = () => {
+  if (noteToDeleteId.value) {
+    notes.value = notes.value.filter(note => note.id !== noteToDeleteId.value);
+    localStorage.setItem('flash-notes', JSON.stringify(notes.value));
+  }
+  cancelDelete();
+};
+
+const cancelDelete = () => {
+  showWarningTip.value = false;
+  noteToDeleteId.value = null;
+};
+
+const editNote = (note) => {
+  editingNote.value = note;
+  showEditModal.value = true;
+};
+
+const handleEditSave = (updatedNote) => {
+  const index = notes.value.findIndex(note => note.id === updatedNote.id);
+  if (index !== -1) {
+    notes.value[index].content = updatedNote.content;
+  }
+  localStorage.setItem('flash-notes', JSON.stringify(notes.value));
+  if(updatedNote.isSubmit === 0)
+  ArcMessage.info("保存修改成功","请尽快提交结果")
+};
+
+const closeEditModal = () => {
+  showEditModal.value = false;
+  editingNote.value = null;
+};
 
 const glassBtns = [
   {
@@ -453,5 +615,216 @@ onUnmounted(() => {
 .glass-btn svg {
   display: block;
   margin: 0 auto;
+}
+
+/* Flash Editor 高度限制 */
+.flash-editor-wrapper {
+  max-height: 500px; /* 限制编辑器最大高度 */
+  overflow: hidden; /* 移除外层滚动，让内部处理 */
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.notes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1.5rem; /* 增加卡片间距 */
+  align-items: start; /* Align items to the start of the grid area */
+}
+
+
+
+.note-card {
+  margin-top: 2rem;
+  background-color: #fff;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative; /* 确保伪元素正确定位 */
+  display: flex;
+  flex-direction: column;
+}
+
+.note-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+
+.note-content {
+  margin-bottom: 2rem;
+  max-height: 450px; /* Directly apply max-height */
+  overflow: hidden;   /* Hide the overflowing content */
+  position: relative;
+}
+
+/* 当内容溢出时，在内容区底部添加一个渐变蒙层提示用户 */
+.note-card.is-overflowing .note-content::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 50px;
+  background: linear-gradient(to top, #ffffff, rgba(255, 255, 255, 0));
+  pointer-events: none; /* 确保伪元素不影响点击 */
+}
+
+.dark-mode .note-card.is-overflowing .note-content::after {
+    background: linear-gradient(to top, #1f2937, rgba(31, 41, 55, 0));
+}
+
+
+
+
+
+.note-content :deep(p) {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  line-height: 1.5;
+  color: #374151;
+}
+
+.note-content :deep(h1) {
+  font-size: 1.25em;
+  font-weight: 700;
+  margin: 0 0 8px 0;
+  color: #111827;
+}
+
+.note-content :deep(h2) {
+  font-size: 1.1em;
+  font-weight: 600;
+  margin: 0 0 6px 0;
+  color: #111827;
+}
+
+.note-content :deep(pre) {
+  background: #2d2d2d; /* 深木炭色 */
+  color: #f8f8f2; /* 柔和白色 */
+  border-radius: 6px;
+  padding: 12px;
+  margin: 12px 0;
+  overflow-x: auto;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+  font-size: 13px;
+  line-height: 1.4;
+}
+
+
+
+.note-content :deep(pre code) {
+  background: transparent;
+  color: inherit;
+  padding: 0;
+}
+.dark-mode .note-content :deep(pre code) {
+  background: transparent;
+
+}
+
+
+.note-actions {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  display: flex;
+  gap: 4px;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+
+.note-card:hover .note-actions {
+  opacity: 1;
+}
+
+/* Dark Mode Styles */
+.dark-mode .note-card {
+  background-color: #1f2937; /* 深灰蓝背景 */
+  border-color: #374151;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+}
+
+.dark-mode .note-card:hover {
+    border-color: #4f46e5;
+}
+
+.dark-mode .note-content :deep(p) {
+  color: #d1d5db; /* 亮灰色文本 */
+}
+
+.dark-mode .note-content :deep(h1),
+.dark-mode .note-content :deep(h2),
+.dark-mode .note-content :deep(h3) {
+  color: #f3f4f6;
+}
+
+/* --- Dark Mode High Contrast Code Block --- */
+.dark-mode .note-content :deep(pre) {
+  background: #f8f8f2; /* 柔和白色背景 */
+  color: #2d2d2d;    /* 深木炭色文字 */
+}
+
+
+.dark-mode .note-actions button {
+  background-color: #374151;
+  color: #d1d5db;
+}
+
+.dark-mode .note-actions button:hover {
+  background-color: #4b5563;
+  color: #ffffff;
+}
+
+.edit-note-btn,
+.delete-note-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-size: 14px;
+
+}
+
+.edit-note-btn {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.edit-note-btn:hover {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.delete-note-btn {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+  font-weight: 600;
+}
+
+
+.delete-note-btn:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
+.dark-mode .delete-note-btn {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+  font-weight: 600 !important;
+}
+.dark-mode .delete-note-btn:hover {
+  background: rgba(239, 68, 68, 0.2) !important;
+}
+.dark-mode .edit-note-btn {
+  background: rgba(59, 130, 246, 0.1) !important;
+  color: #3b82f6 !important;
+}
+.dark-mode .edit-note-btn:hover {
+  background: rgba(59, 130, 246, 0.2) !important;
 }
 </style>

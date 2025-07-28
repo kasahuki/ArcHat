@@ -3,7 +3,7 @@
     <div class="control-button close" @click="handleClose">
       <div class="control-icon"></div>
     </div>
-    <div class="control-button minimize">
+    <div class="control-button minimize" @click="handleMinimize">
       <div class="control-icon"></div>
     </div>
     <div class="control-button maximize">
@@ -13,10 +13,14 @@
 </template>
 
 <script setup>
-const emit = defineEmits(['close']);
+const emit = defineEmits(['close', 'minimize']);
 
 const handleClose = () => {
   emit('close');
+};
+
+const handleMinimize = () => {
+  emit('minimize');
 };
 </script>
 

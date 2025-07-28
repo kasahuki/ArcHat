@@ -35,11 +35,12 @@ defineEmits(['close']);
 <style scoped>
 /* From Uiverse.io by rzouga001 */ 
 .card {
+  scale: 1.5;
+  padding: 0;
   overflow: hidden;
   position: relative;
   text-align: left;
   border-radius: 0.5rem;
-  max-width: 590px;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
   background-color: #fff;
   animation: slideIn 0.4s ease-out;
@@ -68,20 +69,16 @@ defineEmits(['close']);
 }
 
 .dismiss {
+  z-index: 1000000;
   position: absolute;
-  right: 10px;
-  top: 10px;
+  right: 1px;
+  top: 1px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0.5rem 1rem;
-  background-color: #fff;
-  color: black;
   border: 2px solid #D1D5DB;
   font-size: 1rem;
   font-weight: 300;
-  width: 30px;
-  height: 30px;
   border-radius: 7px;
   transition: .3s ease;
 }

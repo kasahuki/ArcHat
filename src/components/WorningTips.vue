@@ -98,14 +98,15 @@ defineProps({
 defineEmits(['confirm', 'cancel']);
 </script>
 <style scoped>
+
 /* From Uiverse.io by Yaya12085 */ 
 .card {
+  padding: 0;
   overflow: hidden;
   position: relative;
-  background-color: #ffffff;
   text-align: left;
   border-radius: 0.5rem;
-  max-width: v-bind(width);
+  width: v-bind(width);
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
@@ -167,7 +168,7 @@ defineEmits(['confirm', 'cancel']);
 
 .actions {
   margin: 0.75rem 1rem;
-  background-color: #f9fafb;
+  background-color: none;
 }
 
 .desactivate {
@@ -218,6 +219,96 @@ button {
   cursor: pointer;
 }
 
+/* 响应式布局 */
+@media (max-width: 768px) {
+  .card {
+    width: 90vw !important;
+    max-width: 350px;
+    margin: 0 auto;
+  }
+  
+  .header {
+    padding: 1rem 1rem 0.75rem 1rem;
+  }
+  
+  .content {
+    padding: 0 1rem 1rem 1rem;
+  }
+  
+  .actions {
+    margin: 0.5rem 1rem;
+    gap: 0.75rem;
+  }
+  
+  .desactivate,
+  .cancel {
+    padding: 0.75rem 1rem;
+    font-size: 0.875rem;
+  }
+}
 
+@media (max-width: 480px) {
+  .card {
+    width: 95vw !important;
+    max-width: 320px;
+  }
+  
+  .header {
+    padding: 0.875rem 0.875rem 0.625rem 0.875rem;
+  }
+  
+  .content {
+    padding: 0 0.875rem 0.875rem 0.875rem;
+  }
+  
+  .actions {
+    margin: 0.5rem 0.875rem;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .desactivate,
+  .cancel {
+    width: 100%;
+    padding: 0.75rem;
+    font-size: 0.875rem;
+  }
+  
+  .title {
+    font-size: 1rem;
+  }
+  
+  .text {
+    font-size: 0.875rem;
+    line-height: 1.4;
+  }
+}
 
+/* 超小屏幕适配 */
+@media (max-width: 360px) {
+  .card {
+    width: 98vw !important;
+    max-width: 300px;
+  }
+  
+  .header {
+    padding: 0.75rem;
+  }
+  
+  .content {
+    padding: 0 0.75rem 0.75rem 0.75rem;
+  }
+  
+  .actions {
+    margin: 0.5rem 0.75rem;
+  }
+  
+  .title {
+    font-size: 0.95rem;
+  }
+  
+  .text {
+    font-size: 0.8rem;
+  }
+}
 </style>

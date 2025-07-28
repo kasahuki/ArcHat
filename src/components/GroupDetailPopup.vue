@@ -55,7 +55,10 @@
           </div>
         </div>
         <div class="popup-footer">
-          <danger-button type="success" @click="handleGroupMoreClick(group, $event)">more</danger-button>
+          <danger-button type="gradient-purple" @click="handleGroupMoreClick(group, $event)">
+            <el-icon><More /></el-icon>
+            关于群聊
+          </danger-button>
         </div>  
       </div>
     </div>
@@ -64,7 +67,7 @@
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue';
-import { ChatDotRound, StarFilled, Medal, UserFilled } from '@element-plus/icons-vue';
+import { ChatDotRound, StarFilled, Medal, UserFilled, More } from '@element-plus/icons-vue';
 import MacWindowControls from './MacWindowControls.vue';
 import { formatDate } from '@/utils/time';
 import DangerButton from './dangerButton.vue';
@@ -146,7 +149,6 @@ onUnmounted(() => {
 .user-detail-popup {
   position: fixed;
   z-index: 9999;
-  background: var(--light-sidebar-bg);
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   width: 280px;
@@ -156,6 +158,12 @@ onUnmounted(() => {
   transition: all 0.3s ease;
    /* 为窗口控制按钮留出空间 */
 }
+
+:deep(.dark-mode .user-detail-popup) {
+  background: black;
+  border: 1px solid var(--dark-border);
+}
+
 
 .window-controls {
   position: absolute;
@@ -328,75 +336,7 @@ onUnmounted(() => {
 }
 
 /* 暗色模式适配 */
-:deep(.dark-mode) .user-detail-popup {
-  background: var(--dark-sidebar-bg);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  border-color: var(--dark-border);
-}
 
-:deep(.dark-mode) .user-detail-content {
-  background: var(--dark-sidebar-bg);
-}
-
-:deep(.dark-mode) .user-name-level h3 {
-  color: var(--dark-text);
-}
-
-:deep(.dark-mode) .user-status {
-  color: var(--dark-secondary-text);
-}
-
-:deep(.dark-mode) .user-details {
-  border-top-color: var(--dark-border);
-}
-
-:deep(.dark-mode) .detail-item .label {
-  color: var(--dark-secondary-text);
-}
-
-:deep(.dark-mode) .detail-item .value {
-  color: var(--dark-text);
-}
-
-:deep(.dark-mode) .group-members {
-  border-top-color: var(--dark-border);
-}
-
-:deep(.dark-mode) .group-members h4 {
-  color: var(--dark-secondary-text);
-}
-
-:deep(.dark-mode) .member-item:hover {
-  background: var(--dark-hover);
-}
-
-:deep(.dark-mode) .member-name {
-  color: var(--dark-text);
-}
-
-:deep(.dark-mode) .members-list::-webkit-scrollbar-thumb {
-  background: var(--dark-border);
-}
-
-:deep(.dark-mode) .member-role.owner {
-  background-color: rgba(245, 108, 108, 0.2);
-  color: #f56c6c;
-}
-
-:deep(.dark-mode) .member-role.admin {
-  background-color: rgba(103, 194, 58, 0.2);
-  color: #67c23a;
-}
-
-:deep(.dark-mode) .user-actions .el-button {
-  background: var(--primary-color);
-  border-color: var(--primary-color);
-}
-
-:deep(.dark-mode) .user-actions .el-button:hover {
-  background: var(--primary-color-hover);
-  border-color: var(--primary-color-hover);
-}
 
 /* 调整头像大小 */
 :deep(.el-avatar) {

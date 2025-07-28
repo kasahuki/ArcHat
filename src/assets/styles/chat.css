@@ -80,7 +80,7 @@
   min-height: 200px;
   max-height: none;
   overflow-y: auto;
-  padding: 24px 24px 10px 24px;
+  padding: 24px 24px 60px 24px;
   display: flex;
   flex-direction: column;
   gap: 30px;
@@ -235,7 +235,6 @@
 .input-icon-btn {
   background: transparent;
   border: none;
-  color: var(--text-color-secondary);
   font-size: 20px;
   padding: 8px;
   border-radius: 50%;
@@ -246,9 +245,24 @@
   flex-shrink: 0;
   position: relative;
 }
-.input-icon-btn:hover {
-  color: var(--primary-color);
-  background: none;
+.input-icon-btn:nth-child(1) svg{
+  color: #0a0a0a;
+}
+.dark-mode .input-icon-btn:nth-child(1) svg{
+  color: #ecf006;
+
+}
+.input-icon-btn:nth-child(2) svg{
+  color: #5e90ee;
+}
+.dark-mode .input-icon-btn:nth-child(2) svg{
+  color: #fdfdfd;
+}
+.input-icon-btn:nth-child(3) svg{ 
+  color: #d1a428;
+}
+.dark-mode .input-icon-btn:nth-child(3) svg{
+  color: #44b8e6;
 }
 .message-input {
   flex: 1;

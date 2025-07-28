@@ -87,19 +87,33 @@
           <input type="checkbox" :checked="selectedIds.includes(todo.id)" readonly />
           <span class="multi-checkmark"></span>
         </label>
-        <DangerButton type="danger" class="todo-del-btn" @click.stop="$emit('delete', todo.id)">删除</DangerButton>
+        <DangerButton type="danger" class="todo-del-btn" @click.stop="requestDelete(todo.id)">删除</DangerButton>
         <DangerButton type="primary" class="todo-edit-btn" @click.stop="startEdit(todo)">编辑</DangerButton>
       </li>
     </ul>
-  </div>
+    <!-- 删除确认弹窗 -->
+     <div class="warning-overlay" v-if="showWarningTip">
+    <WarningTip
+     
+      title="删除待办"
+      message="确定要删除这个待办事项吗？"
+      @confirm="confirmDelete"
+      @cancel="cancelDelete"
+    />
+    </div>
+    </div>
 </template>
 <script setup>
 import { ref, computed, onMounted, onBeforeUnmount } from 'vue';
 import DangerButton from '@/components/dangerButton.vue';
+import WarningTip from '@/components/WorningTips.vue';
 const props = defineProps({
   todos: Array
 });
 const emit = defineEmits(['add', 'update', 'delete', 'reorder']);
+
+const showWarningTip = ref(false);
+const todoToDeleteId = ref(null);
 const input = ref('');
 const inputCategory = ref('main');
 const editingId = ref(null);
@@ -120,7 +134,25 @@ const categories = [
 const currentCategory = ref('main');
 const filteredTodos = computed(() => props.todos.filter(t => t.category === currentCategory.value));
 const editCategory = ref('main');
-function getCategoryColor(cat) {
+
+const requestDelete = (id) => {
+  todoToDeleteId.value = id;
+  showWarningTip.value = true;
+};
+
+const confirmDelete = () => {
+  if (todoToDeleteId.value) {
+    emit('delete', todoToDeleteId.value);
+  }
+  cancelDelete();
+};
+
+const cancelDelete = () => {
+  showWarningTip.value = false;
+  todoToDeleteId.value = null;
+};
+
+const getCategoryColor = (cat) => {
   const c = categories.find(c => c.value === cat);
   return c ? c.color : '#ccc';
 }
@@ -305,9 +337,7 @@ function handleReorderTodo(newList) {
   font-weight: 500;
   margin-right: auto;
 }
-.todo-batch-del-btn {
- 
-}
+
 .todo-batch-del-btn:disabled {
   opacity: 0.5;
   cursor: not-allowed;
@@ -337,9 +367,7 @@ function handleReorderTodo(newList) {
 .todo-input:focus {
   box-shadow: 0 4px 16px rgba(60,60,60,0.13);
 }
-.todo-add-btn {
 
-}
 .todo-add-btn:hover {
   box-shadow: 0 4px 16px rgba(60,60,60,0.13);
 }

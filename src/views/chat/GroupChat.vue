@@ -19,53 +19,63 @@
     </div>
     <!-- 群聊详情弹窗 -->
     <GroupDetailPopup v-if="showGroupDetailPopup" :visible="showGroupDetailPopup" :group="currentGroup"
-      :position="groupDetailPopupPosition" @update:visible="showGroupDetailPopup = false" ref="groupDetailPopupRef" />
+      :position="groupDetailPopupPosition" @update:visible="showGroupDetailPopup = false" ref="groupDetailPopupRef" @group-more="handleGroupMoreClick"/>
+    <GroupDetailDrawer 
+        v-model:visible="showGroupDrawer"
+        :group="selectedGroupForDrawer"
+      />
     <!-- 聊天消息区 -->
     <div class="chat-message-list" ref="messagesContainer" style="position: relative;">
       <!-- 遮罩层，点击关闭抽屉 -->
       <div v-if="showMemberDrawer" class="drawer-mask" @click="showMemberDrawer = false"></div>
       <template v-if="messages.length > 0">
-        <div v-for="(msg, idx) in messages" :key="idx" class="message-wrapper" v-show="!isLoading">
-          <div v-if="shouldShowTime(msg, idx)" class="message-time-group">
-            <span class="time-divider">{{ formatMessageDate(new Date(msg.time)) }}</span>
-          </div>
-          <div :class="['chat-message-item', msg.side]">
-              <el-avatar v-if="msg.side === 'left'" :size="40" class="user-avatar"
-              :src="msg.avatar && msg.avatar.trim() ? msg.avatar : undefined" :alt="msg.username"
-              @click="(e) => handleAvatarClick(e, msg)" style="cursor:pointer;">
-              <template v-if="!msg.avatar || !msg.avatar.trim()">
-                {{ msg.username ? msg.username.charAt(0) : '' }}
-              </template>
-            </el-avatar>
-            <div class="msg-main" @contextmenu.prevent="handleRightClick(msg, $event)">
-              <!-- 新增：左侧消息显示用户名 -->
-              <div v-if="msg.side === 'left'"
-                   class="msg-username"
-                   :class="{'owner-name': msg.role === 1, 'admin-name': msg.role === 2}">
-                {{ msg.username }}
-              </div>
-              <!-- 文件消息 -->
-              <template v-if="msg.type === 4 && msg.text && msg.text.url">
-                <div :class="['file-msg', getFileTypeClass(msg.text.fileName)]">
-                  <a :href="msg.text.url" :download="msg.text.fileName" target="_blank">
-                    <span class="file-msg-icon" v-html="getFileSvg(msg.text.fileName.split('.').pop().toLowerCase())"></span>
-                    <span class="file-msg-name">{{ msg.text.fileName }}</span>
-                    <span class="file-msg-size">({{ formatFileSize(msg.text.size) }})</span>
-                  </a>
-                </div>
-              </template>
-              <!-- 图片消息 -->
-              <template v-else-if="msg.type === 3 && msg.text && msg.text.url">
-                <el-image :src="msg.text.url" :preview-src-list="[msg.text.url]" class="img-shadow"
-                  style="max-width:280px;max-height:580px;border-radius:8px;" />
-              </template>
-              <!-- 普通文本消息 -->
-              <template v-else>
-                <div class="chat-bubble" v-html="msg.text"></div>
-              </template>
+        <div v-for="(msg, idx) in messages" :key="msg.id || idx" 
+             class="message-wrapper" 
+             :data-msg-id="msg.id || idx"
+             v-show="!isLoading"
+             :style="{ minHeight: msg.isVisible ? 'auto' : '60px' }">
+          <template v-if="msg.isVisible">
+            <div v-if="shouldShowTime(msg, idx)" class="message-time-group">
+              <span class="time-divider">{{ formatMessageDate(new Date(msg.time)) }}</span>
             </div>
-            <el-avatar v-if="msg.side === 'right'" :size="40" class="user-avatar" :src="userStore.userInfo.avatar" />
-          </div>
+            <div :class="['chat-message-item', msg.side]">
+                <el-avatar v-if="msg.side === 'left'" :size="40" class="user-avatar"
+                :src="msg.avatar && msg.avatar.trim() ? msg.avatar : undefined" :alt="msg.username"
+                @click="(e) => handleAvatarClick(e, msg)" style="cursor:pointer;">
+                <template v-if="!msg.avatar || !msg.avatar.trim()">
+                  {{ msg.username ? msg.username.charAt(0) : '' }}
+                </template>
+              </el-avatar>
+              <div class="msg-main" @contextmenu.prevent="handleRightClick(msg, $event)">
+                <!-- 新增：左侧消息显示用户名 -->
+                <div v-if="msg.side === 'left'"
+                     class="msg-username"
+                     :class="{'owner-name': msg.role === 1, 'admin-name': msg.role === 2}">
+                  {{ msg.username }}
+                </div>
+                <!-- 文件消息 -->
+                <template v-if="msg.type === 4 && msg.text && msg.text.url">
+                  <div :class="['file-msg', getFileTypeClass(msg.text.fileName)]">
+                    <a :href="msg.text.url" :download="msg.text.fileName" target="_blank">
+                      <span class="file-msg-icon" v-html="getFileSvg(msg.text.fileName.split('.').pop().toLowerCase())"></span>
+                      <span class="file-msg-name">{{ msg.text.fileName }}</span>
+                      <span class="file-msg-size">({{ formatFileSize(msg.text.size) }})</span>
+                    </a>
+                  </div>
+                </template>
+                <!-- 图片消息 -->
+                <template v-else-if="msg.type === 3 && msg.text && msg.text.url">
+                  <el-image :src="msg.text.url" :preview-src-list="[msg.text.url]" class="img-shadow"
+                    style="max-width:280px;max-height:580px;border-radius:8px;" />
+                </template>
+                <!-- 普通文本消息 -->
+                <template v-else>
+                  <div class="chat-bubble" v-html="msg.text"></div>
+                </template>
+              </div>
+              <el-avatar v-if="msg.side === 'right'" :size="40" class="user-avatar" :src="userStore.userInfo.avatar" />
+            </div>
+          </template>
         </div>
       </template>
       <template v-else>
@@ -86,7 +96,7 @@
             <MacWindowControls @close="showMemberDrawer = false" style="margin-right: 8px; top: 2px" />
           </div>
           <div class="member-list">
-            <div v-for="member in currentGroup.members" :key="member.id" class="member-item">
+            <div v-for="member in currentGroup.members.slice(0, 7)" :key="member.id" class="member-item">
               <div class="member-avatar-wrapper">
                 <el-avatar :size="32" :src="member.avatar"
                   :class="[member.role === 1 ? 'avatar-owner' : member.role === 2 ? 'avatar-admin' : '']"
@@ -94,7 +104,7 @@
                 <span class="member-status-dot"
                   :class="{ online: member.status === 1, offline: member.status !== 1 }"></span>
               </div>
-              <span>{{ member.name }}</span>
+              <span>{{  member.name }}</span>
             </div>
           </div>
         </div>
@@ -112,7 +122,7 @@
       </UserDetailPopup>
     </div>
     <!-- 底部输入区 -->
-    <div class="message-input-container" style="position: relative;"
+    <div class="message-input-container" ref="inputContainer" style="position: relative;"
          @dragover.prevent
          @drop.prevent="handleDropFile">
       <!-- 多图预览区，悬浮在输入框上方 -->
@@ -145,7 +155,7 @@
           </div>
         </div>
       </div>
-      <el-button class="input-icon-btn" circle @click="showEmojiPicker = true">
+      <el-button ref="emojiButton" class="input-icon-btn" circle @click.stop="showEmojiPicker=!showEmojiPicker">
         <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24"><!-- Icon from Material Line Icons by Vjacheslav Trushkin - https://github.com/cyberalien/line-md/blob/master/license.txt --><mask id="lineMdEmojiGrinFilled0"><g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"><path fill="#fff" fill-opacity="0" stroke-dasharray="64" stroke-dashoffset="64" d="M12 3c4.97 0 9 4.03 9 9c0 4.97 -4.03 9 -9 9c-4.97 0 -9 -4.03 -9 -9c0 -4.97 4.03 -9 9 -9"><animate fill="freeze" attributeName="fill-opacity" begin="0.7s" dur="0.5s" values="0;1"/><animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="64;0"/></path><path stroke="#000" stroke-dasharray="2" stroke-dashoffset="2" d="M9 9v1"><animate fill="freeze" attributeName="stroke-dashoffset" begin="1.2s" dur="0.2s" values="2;0"/></path><path stroke="#000" stroke-dasharray="2" stroke-dashoffset="2" d="M15 9v1"><animate fill="freeze" attributeName="stroke-dashoffset" begin="1.4s" dur="0.2s" values="2;0"/></path><path fill="#000" stroke="none" d="M12 15c-2.5 0 -3.25 0 -4 0c-0.55 0 -1 0 -1 0c0 0 1.5 0 5 0c3.5 0 5 0 5 0c0 0 -0.45 0 -1 0c-0.75 0 -1.5 0 -4 0Z"><animate fill="freeze" attributeName="d" begin="1.6s" dur="0.2s" values="M12 15c-2.5 0 -3.25 0 -4 0c-0.55 0 -1 0 -1 0c0 0 1.5 0 5 0c3.5 0 5 0 5 0c0 0 -0.45 0 -1 0c-0.75 0 -1.5 0 -4 0Z;M12 14c-2.5 0 -3.25 -1 -4 -1c-0.55 0 -1 0.45 -1 1c0 0.75 1.5 4 5 4c3.5 0 5 -3.25 5 -4c0 -0.55 -0.45 -1 -1 -1c-0.75 0 -1.5 1 -4 1Z"/></path></g></mask><rect width="24" height="24" fill="currentColor" mask="url(#lineMdEmojiGrinFilled0)"/></svg>
       </el-button>
       <el-button class="input-icon-btn" circle @click="triggerImageInput">
@@ -168,13 +178,28 @@
         </el-icon>
       </el-button>
     </div>
+    <!-- #region Emoji 选择器 -->
     <!-- Emoji 选择器抽屉 -->
-    <el-drawer v-model="showEmojiPicker" title="选择表情" direction="btt" size="400px" :with-header="false"
-      class="emoji-drawer">
-      <emoji-picker @emoji-click="onEmojiSelect" :native="true" :show-preview="true" :show-skin-tones="true"
-        :show-search="true" :show-categories="true" :show-recent="true" :recent="recentEmojis"
-        :theme="isDarkMode ? 'dark' : 'light'" />
-    </el-drawer>
+    <div
+      v-if="showEmojiPicker"
+      ref="emojiPanel"
+      class="emoji-drawer-container"
+      direction="btt"
+      style="height: 400px !important;"
+    >
+      <emoji-picker
+        @emoji-click="onEmojiSelect"
+        :native="true"
+        :show-preview="true"
+        :show-skin-tones="true"
+        :show-search="true"
+        :show-categories="true"
+        :show-recent="true"
+        :recent="recentEmojis"
+        :theme="isDarkMode ? 'dark' : 'light'"
+      />
+    </div>
+    <!-- #endregion -->
     <!-- 群聊专属功能区 -->
     <!-- WebSocket 连接状态提示（群聊） -->
     <div v-if="connectionStatus === 'disconnected'" class="connection-status-bar">
@@ -215,7 +240,7 @@ import { useDark } from '@vueuse/core';
 import { useRoute } from 'vue-router';
 import { useUserInfoStore } from '@/stores/user';
 import { useContactStore } from '@/stores/contact';
-import { getGroupDetail, listGroupMember } from '@/api/room';
+import { getGroupDetail, listGroupMember, getGroupMemberCount } from '@/api/room';
 import { getGroupMessageList } from '@/api/chatService';
 import Loading from '@/components/loading.vue';
 import MacWindowControls from '@/components/MacWindowControls.vue';
@@ -236,12 +261,14 @@ import { ElMessage } from 'element-plus';
 import { getFileSvg } from '@/utils/filesIcons';
 import RightKeyPop from '@/components/RightKeyPop.vue';
 import ExpDialog from '@/components/ExpDialog.vue'
+import GroupDetailDrawer from '@/components/GroupDetailDrawer.vue';
 const isReconnecting = ref(false);
 const route = useRoute();
 const userStore = useUserInfoStore();
 const contactStore = useContactStore();
 const inputValue = ref('');
 const messages = ref([]);
+const observer = ref(null);
 const page = ref(1);
 const pageSize = 100;
 const hasMore = ref(true);
@@ -251,9 +278,11 @@ const isDarkMode = useDark();
 const messagesContainer = ref(null);
 const messageInput = ref(null);
 const isLoading = ref(false);
+const emojiPanel = ref(null);
+const emojiButton = ref(null);
+const inputContainer = ref(null);
 const showMemberDrawer = ref(false);
 const memberMap = ref({}); // 群成员id->member对象映射
-
 const currentGroup = ref({
   id: '',
   roomId: '',
@@ -358,14 +387,92 @@ function showGroupDetailPopupHandler(event) {
   });
 }
 
-function handleClickOutside(e) {
-  if (!showGroupDetailPopup.value) return;
-  // 检查点击是否在弹窗内
-  const popupEl = groupDetailPopupRef.value?.$el || groupDetailPopupRef.value;
-  if (popupEl && !popupEl.contains(e.target)) {
-    showGroupDetailPopup.value = false;
+
+const showGroupDrawer = ref(false);
+const selectedGroupForDrawer = ref(null);
+// 处理群聊more按钮点击
+const handleGroupMoreClick = async (group, event) => {
+
+let detail = {};
+let memberCount = 0;
+let members = [];
+try {
+  const [detailRes, countRes, membersRes] = await Promise.all([
+    getGroupDetail(group.id),
+    getGroupMemberCount(group.id),
+    listGroupMember(group.id, { page: 1, pageSize: 7 })
+  ]);
+  if (detailRes.code === 200 && detailRes.data) {
+    detail = detailRes.data;
   }
+  if (countRes.code === 200 && typeof countRes.data === 'number') {
+    memberCount = countRes.data;
+  }
+  if (membersRes.code === 200 && membersRes.data && membersRes.data.records) {
+    // 映射成员数据字段以确保与GroupDetailDrawer组件兼容
+    members = membersRes.data.records.map(m => ({
+      id: m.uid,
+      uid: m.uid,
+      name: m.name || m.username || m.nickname,
+      username: m.name || m.username || m.nickname,
+      avatar: m.avatar,
+      role: m.role,
+      status: m.status,
+      level: calculateLevel(m.exp || m.exep || 0),
+      exp: m.exp || m.exep || 0,
+      joinGroupTime: m.joinGroupTime,
+      createTime: m.createTime,
+      isFriend: m.isFriend || false
+    }));
+  }
+} catch (e) {
+  // ignore
 }
+
+selectedGroupForDrawer.value = {
+  ...group,
+  ...detail,
+  createTime: detail.createTime || group.createTime || '',
+  owner: detail.owner || group.owner || '',
+  announcement: detail.groupDesc || group.announcement || '暂无公告…',
+  memberCount,
+  members
+};
+
+showGroupDrawer.value = true;
+};
+
+// Intersection Observer for lazy rendering
+const setupObserver = () => {
+  if (observer.value) {
+    observer.value.disconnect();
+  }
+
+  const options = {
+    root: messagesContainer.value,
+    rootMargin: '200px 0px 200px 0px', // Larger margin for smoother scrolling
+    threshold: 0.01
+  };
+
+  observer.value = new IntersectionObserver((entries) => {
+    entries.forEach(entry => {
+      const msgId = entry.target.dataset.msgId;
+      const msg = messages.value.find(m => (m.id || m.idx) == msgId);
+      if (msg) {
+        // Dynamically set visibility based on intersection status
+        msg.isVisible = entry.isIntersecting;
+      }
+    });
+  }, options);
+
+  // Observe all message elements
+  nextTick(() => {
+    const messageNodes = messagesContainer.value?.querySelectorAll('.message-wrapper');
+    messageNodes?.forEach(node => {
+      observer.value.observe(node);
+    });
+  });
+};
 
 function resetAndFetch() {
   messages.value = [];
@@ -384,7 +491,8 @@ watch(
 
 onMounted(() => {
   resetAndFetch();
-  document.addEventListener('mousedown', handleClickOutside);
+  // 添加emoji点击外部关闭事件监听器
+  document.addEventListener('click', handleClickOutside);
   emitter.on('group-message', handleGroupMessage);
   // 监听WebSocket连接成功事件，关闭loading动画
   emitter.on('websocket-connected', () => {
@@ -397,13 +505,17 @@ onMounted(() => {
     connectionStatus.value = 'disconnected';
   });
 });
-onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', handleClickOutside);
-});
+
 onUnmounted(() => {
+  // 移除emoji点击外部关闭事件监听器
+  document.removeEventListener('click', handleClickOutside);
   emitter.off('group-message');
   emitter.off('websocket-connected');
   emitter.off('websocket-reconnect');
+  // Disconnect the observer
+  if (observer.value) {
+    observer.value.disconnect();
+  }
 });
 
 // 连接成功后动画未及时关闭的问题
@@ -453,13 +565,14 @@ const loadGroupMessages = async (reset = false) => {
     // 适配后端分页结构
     const records = res?.data?.records || [];
     if (res.code === 200 && Array.isArray(records)) {
-      const historyMessages = records.map(msg => {
+      const historyMessages = records.map((msg, idx) => {
         const fromUid = msg.fromUser?.uid;
         const message = msg.message || {};
         // 通过memberMap查找群成员信息
         const member = memberMap.value[fromUid] || {};
         return {
           id: message.id,
+          idx: `hist-${page.value}-${idx}`,
           roomId: message.roomId,
           time: message.sendTime,
           type: message.type,
@@ -469,13 +582,26 @@ const loadGroupMessages = async (reset = false) => {
           avatar: member.avatar || msg.fromUser?.avatar || '',
           username: member.name || msg.fromUser?.username || 'UnKnown',
           role: member.role,
-          status: member.status
+          status: member.status,
+          isVisible: false // All historical messages start as not visible
         };
       });
       if (reset) {
         messages.value = historyMessages;
+        nextTick(() => {
+          scrollToBottom();
+          setupObserver();
+        });
       } else {
+        const oldHeight = messagesContainer.value?.scrollHeight || 0;
         messages.value = [...historyMessages, ...messages.value];
+        nextTick(() => {
+          // Maintain scroll position when loading older messages
+          if (messagesContainer.value) {
+            messagesContainer.value.scrollTop = messagesContainer.value.scrollHeight - oldHeight;
+          }
+          setupObserver();
+        });
       }
       hasMore.value = records.length === pageSize;
     } else {
@@ -516,10 +642,11 @@ watch(
         if (memberRes.code === 200 && memberRes.data && memberRes.data.records) {
           const members = memberRes.data.records.map(m => ({
             id: m.uid,
-            name: m.username,
+            name: m.name || m.username || m.nickname,
             avatar: m.avatar,
             role: m.role,
             status: m.status,
+            level: calculateLevel(m.exp || m.exep || 0),
             joinGroupTime: m.joinGroupTime
           }));
           currentGroup.value.members = members;
@@ -652,7 +779,8 @@ const sendMessage = async () => {
           avatar: member.avatar || msg.fromUser?.avatar || '',
           username: member.name || msg.fromUser?.username || '群成员',
           role: member.role,
-          status: member.status
+          status: member.status,
+          isVisible: true // 新发送的消息立即可见
         };
         messages.value.push(newMsg);
         inputValue.value = '';
@@ -674,6 +802,25 @@ const onEmojiSelect = (event) => {
   if (!recentEmojis.value.includes(emoji)) {
     recentEmojis.value = [emoji, ...recentEmojis.value].slice(0, 20);
   }
+};
+
+// Emoji 点击外部关闭功能
+const handleClickOutside = (e) => {
+  // 如果 emoji 面板不存在，直接返回
+  if (!showEmojiPicker.value) return;
+  
+  // 检查点击目标是否在 emoji 面板内
+  if (emojiPanel.value && emojiPanel.value.contains(e.target)) {
+    return;
+  }
+  
+  // 检查点击目标是否在底部输入控制栏内（包括所有按钮和输入框）
+  if (inputContainer.value && inputContainer.value.contains(e.target)) {
+    return;
+  }
+  
+  // 如果点击在面板和输入控制栏之外，关闭 emoji 选择器
+  showEmojiPicker.value = false;
 };
 
 const shouldShowTime = (currentMsg, index) => {
@@ -810,11 +957,18 @@ function handleGroupMessage(data) {
     avatar: member.avatar || data.fromUser?.avatar || '',
     username: member.name || data.fromUser?.username || '群成员',
     role: member.role,
-    status: member.status
+    status: member.status,
+    isVisible: true // New messages are immediately visible
   };
 
   messages.value.push(newMsg);
-  nextTick(scrollToBottom);
+  nextTick(() => {
+    scrollToBottom();
+    const newNode = messagesContainer.value?.querySelector(`[data-msg-id="${newMsg.id}"]`);
+    if (newNode) {
+      observer.value?.observe(newNode);
+    }
+  });
 }
 
 const imageInput = ref(null);
@@ -864,7 +1018,30 @@ async function sendImageMessage() {
           height
         }
       };
-      await sendMsg(params);
+      const res = await sendMsg(params);
+      if (res.code === 200 && res.data) {
+        // 立即添加到消息列表进行渲染
+        const msg = res.data;
+        const fromUid = msg.fromUser?.uid;
+        const message = msg.message || {};
+        const member = memberMap.value[fromUid] || {};
+        const newMsg = {
+          id: message.id,
+          roomId: message.roomId,
+          time: message.sendTime,
+          type: message.type,
+          text: getMessageText(message),
+          fromUid,
+          side: fromUid === userStore.userInfo.uid ? 'right' : 'left',
+          avatar: member.avatar || msg.fromUser?.avatar || '',
+          username: member.name || msg.fromUser?.username || '群成员',
+          role: member.role,
+          status: member.status,
+          isVisible: true // 新发送的消息立即可见
+        };
+        messages.value.push(newMsg);
+        nextTick(scrollToBottom);
+      }
     } catch (e) {
       ElMessage.error('图片上传失败');
       continue;
@@ -956,7 +1133,34 @@ async function sendFileMessages() {
         fileName: preview.file.name
       }
     };
-    await sendMsg(params);
+    try {
+      const res = await sendMsg(params);
+      if (res.code === 200 && res.data) {
+        // 立即添加到消息列表进行渲染
+        const msg = res.data;
+        const fromUid = msg.fromUser?.uid;
+        const message = msg.message || {};
+        const member = memberMap.value[fromUid] || {};
+        const newMsg = {
+          id: message.id,
+          roomId: message.roomId,
+          time: message.sendTime,
+          type: message.type,
+          text: getMessageText(message),
+          fromUid,
+          side: fromUid === userStore.userInfo.uid ? 'right' : 'left',
+          avatar: member.avatar || msg.fromUser?.avatar || '',
+          username: member.name || msg.fromUser?.username || '群成员',
+          role: member.role,
+          status: member.status,
+          isVisible: true // 新发送的消息立即可见
+        };
+        messages.value.push(newMsg);
+        nextTick(scrollToBottom);
+      }
+    } catch (e) {
+      ElMessage.error('文件发送失败');
+    }
   }
   filePreviewList.value = [];
 }
@@ -1798,4 +2002,7 @@ body.dark-theme .ws-reconnect-mask {
   overflow-x: auto;
   justify-content: center;
 }
+
+
+
 </style>

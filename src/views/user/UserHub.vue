@@ -9,7 +9,7 @@
       <!-- 第一部分：个人信息 -->
       <div class="content-box profile-section">
         <div class="content-box-header">
-          <h2 class="content-box-title">个人信息</h2>
+          <h2 class="content-box-title">我的信息</h2>
         </div>
         <div class="content-box-body">
           <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
@@ -62,9 +62,9 @@
                   Lv.{{ userLevel }}
                 </div>
                
-                <DangerButton type="danger" @click="handleLogout" class="logout-btn">
+                <DangerButton type="gradient-orange" @click="handleLogout" class="logout-btn">
            
-                  <span style=" display: flex;  gap: 5px;padding: 2px" > <svg xmlns="http://www.w3.org/2000/svg" width="22"  viewBox="0 0 16 16"><!-- Icon from IcoMoon Free by Keyamoon - https://www.gnu.org/licenses/gpl.html --><path fill="currentColor" d="M6 8H1V6h5V4l3 3l-3 3zm10-8v13l-6 3v-3H4V9h1v3h5V3l4-2H5v4H4V0z"/></svg>退出登录</span>
+                  <span style=" display: flex;  gap: 5px;padding: 2px;color: white;" > <svg xmlns="http://www.w3.org/2000/svg" width="22"  viewBox="0 0 16 16"><!-- Icon from IcoMoon Free by Keyamoon - https://www.gnu.org/licenses/gpl.html --><path fill="currentColor" d="M6 8H1V6h5V4l3 3l-3 3zm10-8v13l-6 3v-3H4V9h1v3h5V3l4-2H5v4H4V0z"/></svg>退出登录</span>
                 </DangerButton>
               </div>
               <div class="exp-bar">
@@ -521,7 +521,7 @@ import { logoutService, modifyPwdService, modifyUsernameService, modifyAvatarSer
 import { deleteFriend } from '@/api/friend';
 import { useUserInfoStore } from '@/stores/user';
 import emitter from '@/utils/eventBus';
-import { getGroupDetail, getGroupMemberCount, getOtherJoinGroupApplyList, handleGroupJoinApply } from '@/api/room';
+import { getGroupDetail, getGroupMemberCount, listGroupMember, getOtherJoinGroupApplyList, handleGroupJoinApply } from '@/api/room';
 import { useContactStore } from '@/stores/contact';
 import { uploadImageFile } from '@/utils/fileHandler';
 import ExpDialog from '@/components/ExpDialog.vue';
@@ -809,16 +809,21 @@ const handleGroupMoreClick = async (group, event) => {
 
   let detail = {};
   let memberCount = 0;
+  let members = [];
   try {
-    const [detailRes, countRes] = await Promise.all([
+    const [detailRes, countRes, membersRes] = await Promise.all([
       getGroupDetail(group.id),
-      getGroupMemberCount(group.id)
+      getGroupMemberCount(group.id),
+      listGroupMember(group.id, { page: 1, pageSize: 7 })
     ]);
     if (detailRes.code === 200 && detailRes.data) {
       detail = detailRes.data;
     }
     if (countRes.code === 200 && typeof countRes.data === 'number') {
       memberCount = countRes.data;
+    }
+    if (membersRes.code === 200 && membersRes.data && membersRes.data.records) {
+      members = membersRes.data.records;
     }
   } catch (e) {
     // ignore
@@ -830,7 +835,8 @@ const handleGroupMoreClick = async (group, event) => {
     createTime: detail.createTime || group.createTime || '',
     owner: detail.owner || group.owner || '',
     announcement: detail.groupDesc || group.announcement || '暂无公告…',
-    memberCount
+    memberCount,
+    members
   };
 
   showGroupDrawer.value = true;
@@ -1104,6 +1110,7 @@ const handleRequestAction = async (req, status) => {
   if (requestLoadingMap.value[req.id]) return;
   requestLoadingMap.value = { ...requestLoadingMap.value, [req.id]: true };
   try {
+
     await handleGroupJoinApply({ id: req.id, status });
     ElMessage.success(status === 1 ? '已同意' : '已拒绝');
     await fetchGroupJoinRequests();

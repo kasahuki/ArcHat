@@ -176,6 +176,7 @@ const handleClickOutside = (event) => {
 
 onMounted(() => {
   document.addEventListener('mousedown', handleClickOutside);
+  emit('')
 });
 
 onUnmounted(() => {
@@ -189,7 +190,7 @@ onUnmounted(() => {
 .user-detail-popup {
   position: fixed;
   z-index: 19999 !important;
-  background: var(--light-sidebar-bg);
+  background: rgb(84, 216, 90);
   border-radius: 12px;
   box-shadow: 0 4px 24px rgba(0, 0, 0, 0.2);
   width: 320px;

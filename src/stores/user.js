@@ -86,7 +86,8 @@ export const useUserInfoStore = defineStore('userInfo', () => {
                 break;
               case 4: // 群消息
                 emitter.emit('group-message', data.data);
-                emitter.emit('refresh-group-contact-list');
+                console.log('收到群消息:', data.data);
+                emitter.emit('refresh-group-contact-list', data.data);
                 break;
                 // 其他用户上下线通知
               case 5:

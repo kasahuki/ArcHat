@@ -32,12 +32,14 @@
           </div>
         </div>
       </div>
+
     </div>
     <!-- #endregion -->
 
     <!-- #region 聊天消息列表 -->
     <!-- 聊天显示信息框（可滚动） -->
     <div class="chat-message-list" ref="messagesContainer">
+
       <template v-if="messages.length > 0">
         <div v-for="(msg, idx) in messages" :key="idx" class="message-wrapper" v-show="!isLoading">
           <!-- 时间显示 -->
@@ -74,16 +76,41 @@
 
     <!-- #region 底部输入区 -->
     <!-- 底部输入区 -->
-    <div class="message-input-container">
+    <div class="message-input-container" ref="inputContainer">
       <el-button class="input-icon-btn link-icon" circle>
-        <el-icon>
-          <Link />
-        </el-icon>
+        <span>
+          <svg xmlns="http://www.w3.org/2000/svg" width="30"
+            viewBox="0 0 24 24"><!-- Icon from Google Material Icons by Material Design Authors - https://github.com/material-icons/material-icons/blob/master/LICENSE -->
+            <path fill="currentColor"
+              d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91c0-2.65-1.03-5.14-2.9-7.01m-7.01 15.24c-1.48 0-2.93-.4-4.2-1.15l-.3-.18l-3.12.82l.83-3.04l-.2-.31a8.26 8.26 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24c2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c.02 4.54-3.68 8.23-8.22 8.23m4.52-6.16c-.25-.12-1.47-.72-1.69-.81c-.23-.08-.39-.12-.56.12c-.17.25-.64.81-.78.97c-.14.17-.29.19-.54.06c-.25-.12-1.05-.39-1.99-1.23c-.74-.66-1.23-1.47-1.38-1.72c-.14-.25-.02-.38.11-.51c.11-.11.25-.29.37-.43s.17-.25.25-.41c.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31c-.22.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74c.59.26 1.05.41 1.41.52c.59.19 1.13.16 1.56.1c.48-.07 1.47-.6 1.67-1.18c.21-.58.21-1.07.14-1.18s-.22-.16-.47-.28" />
+          </svg>
+        </span>
       </el-button>
-      <el-button class="input-icon-btn" circle @click="showEmojiPicker = true">
-        <el-icon>
-          <ChatRound />
-        </el-icon>
+      <el-button ref="emojiButton" class="input-icon-btn" circle @click.stop="showEmojiPicker=!showEmojiPicker">
+        <svg xmlns="http://www.w3.org/2000/svg" width="30"
+          viewBox="0 0 24 24"><!-- Icon from Material Line Icons by Vjacheslav Trushkin - https://github.com/cyberalien/line-md/blob/master/license.txt -->
+          <mask id="lineMdEmojiGrinFilled0">
+            <g fill="none" stroke="#fff" stroke-linecap="round" stroke-linejoin="round" stroke-width="2">
+              <path fill="#fff" fill-opacity="0" stroke-dasharray="64" stroke-dashoffset="64"
+                d="M12 3c4.97 0 9 4.03 9 9c0 4.97 -4.03 9 -9 9c-4.97 0 -9 -4.03 -9 -9c0 -4.97 4.03 -9 9 -9">
+                <animate fill="freeze" attributeName="fill-opacity" begin="0.7s" dur="0.5s" values="0;1" />
+                <animate fill="freeze" attributeName="stroke-dashoffset" dur="0.6s" values="64;0" />
+              </path>
+              <path stroke="#000" stroke-dasharray="2" stroke-dashoffset="2" d="M9 9v1">
+                <animate fill="freeze" attributeName="stroke-dashoffset" begin="1.2s" dur="0.2s" values="2;0" />
+              </path>
+              <path stroke="#000" stroke-dasharray="2" stroke-dashoffset="2" d="M15 9v1">
+                <animate fill="freeze" attributeName="stroke-dashoffset" begin="1.4s" dur="0.2s" values="2;0" />
+              </path>
+              <path fill="#000" stroke="none"
+                d="M12 15c-2.5 0 -3.25 0 -4 0c-0.55 0 -1 0 -1 0c0 0 1.5 0 5 0c3.5 0 5 0 5 0c0 0 -0.45 0 -1 0c-0.75 0 -1.5 0 -4 0Z">
+                <animate fill="freeze" attributeName="d" begin="1.6s" dur="0.2s"
+                  values="M12 15c-2.5 0 -3.25 0 -4 0c-0.55 0 -1 0 -1 0c0 0 1.5 0 5 0c3.5 0 5 0 5 0c0 0 -0.45 0 -1 0c-0.75 0 -1.5 0 -4 0Z;M12 14c-2.5 0 -3.25 -1 -4 -1c-0.55 0 -1 0.45 -1 1c0 0.75 1.5 4 5 4c3.5 0 5 -3.25 5 -4c0 -0.55 -0.45 -1 -1 -1c-0.75 0 -1.5 1 -4 1Z" />
+              </path>
+            </g>
+          </mask>
+          <rect width="24" height="24" fill="currentColor" mask="url(#lineMdEmojiGrinFilled0)" />
+        </svg>
       </el-button>
       <div class="message-input">
         <input type="text" v-model="currentInputValue" placeholder="Type a message..." @keyup.enter="sendMessage"
@@ -99,12 +126,29 @@
 
     <!-- #region Emoji 选择器 -->
     <!-- Emoji 选择器抽屉 -->
-    <el-drawer v-model="showEmojiPicker" title="选择表情" direction="btt" size="400px" :with-header="false"
-      class="emoji-drawer">
-      <emoji-picker @emoji-click="onEmojiSelect" :native="true" :show-preview="true" :show-skin-tones="true"
-        :show-search="true" :show-categories="true" :show-recent="true" :recent="recentEmojis"
-        :theme="isDarkMode ? 'dark' : 'light'" />
-    </el-drawer>
+    <div
+      v-if="showEmojiPicker"
+      ref="emojiPanel"
+      class="emoji-drawer-container"
+      direction="btt"
+      style="height: 400px !important;"
+    >
+      <emoji-picker
+     
+        @emoji-click="onEmojiSelect"
+        :native="true"
+        :show-preview="true"
+        :show-skin-tones="true"
+        :show-search="true"
+        :show-categories="true"
+        :show-recent="true"
+        :recent="recentEmojis"
+        :theme="isDarkMode ? 'dark' : 'light'"
+      />
+    </div>
+
+
+
     <!-- #endregion -->
 
     <!-- #region 用户详情弹窗 -->
@@ -147,6 +191,7 @@ import Loading from '@/components/loading.vue';
 import clickSound from '@/assets/sounds/click.m4a'
 import dangerButton from '@/components/dangerButton.vue';
 import WaitConnLoading from '@/components/WaitConnLoading.vue';
+import { onBeforeUnmount } from 'vue';
 // #endregion
 
 // #region 基础状态与引用
@@ -171,6 +216,9 @@ const recentEmojis = ref([]);
 const isDarkMode = useDark();
 const hoverIdx = ref(null);
 const isReconnecting = ref(false);
+const emojiPanel = ref(null);
+const emojiButton = ref(null);
+const inputContainer = ref(null);
 function onRecallMessage(msg) {
   // TODO: 撤回逻辑
   ElMessage.info('撤回功能开发中');
@@ -189,6 +237,24 @@ const selectedUser = ref({
 });
 const userDetailPosition = ref({ x: 0, y: 0 });
 // #endregion
+
+const handleClickOutside = (e) => {
+  // 如果 emoji 面板不存在，直接返回
+  if (!showEmojiPicker.value) return;
+  
+  // 检查点击目标是否在 emoji 面板内
+  if (emojiPanel.value && emojiPanel.value.contains(e.target)) {
+    return;
+  }
+  
+  // 检查点击目标是否在底部输入控制栏内（包括所有按钮和输入框）
+  if (inputContainer.value && inputContainer.value.contains(e.target)) {
+    return;
+  }
+  
+  // 如果点击在面板和输入控制栏之外，关闭 emoji 选择器
+  showEmojiPicker.value = false;
+}
 
 // #region 当前聊天对象信息
 const currentChat = ref({
@@ -318,11 +384,11 @@ watch(
     if (route.path.startsWith('/chat/')) {
       newId = Number(newId);
       isLoading.value = true;
-    
+
       await checkAndHandleChat(newId);
       try {
         let chatUser = contactStore.getContactById(newId);
-     
+
         if (!chatUser) {
           isReconnecting.value = true;
           await new Promise(resolve => setTimeout(resolve, 1000));
@@ -369,7 +435,7 @@ const currentChatStatus = computed(() => {
 
 // #region 生命周期钩子
 onMounted(() => {
-  
+  document.addEventListener('click', handleClickOutside);
   emitter.on('websocket-reconnect', () => {
     console.log('Chat收到WebSocket重连事件，显示重连弹窗');
     connectionStatus.value = 'disconnected';
@@ -422,7 +488,6 @@ onMounted(() => {
         });
       }
     } else {
-      console.log('添加消息到当前聊天:', messageData);
       messages.value.push({
         side: messageData.fromUid === userStore.userInfo.uid ? 'right' : 'left',
         text: messageData.content,
@@ -446,10 +511,11 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
-  console.log('Chat 组件卸载，移除消息监听');
   emitter.off('chat-message');
   emitter.off('websocket-reconnect');
   emitter.off('websocket-connected');
+  document.removeEventListener('click', handleClickOutside)
+
 });
 // #endregion
 
@@ -654,19 +720,9 @@ body.dark-theme .ws-reconnect-mask {
   background: rgba(30, 30, 30, 0.6);
 }
 
-.app-container,
-.chat-container {
-  filter: blur(0px);
-  transition: filter 0.2s;
-}
+:deep(.el-drawer.btt) {
+  position: fixed !important;
 
-.ws-reconnect-mask~.app-container,
-.ws-reconnect-mask~.chat-container {
-  filter: blur(4px);
-}
 
-.blurred {
-  filter: blur(4px);
-  pointer-events: none;
 }
 </style>
