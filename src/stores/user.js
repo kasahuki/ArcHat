@@ -62,11 +62,22 @@ export const useUserInfoStore = defineStore('userInfo', () => {
     }
 
     try {
+      // 根据环境变量动态构建 WebSocket URL
+      let wsUrl;
+      // npm run dev 时 import.meta.env.DEV 为 true
+      if (import.meta.env.DEV) {
+        // 开发环境：使用本地地址
+        wsUrl = import.meta.env.VITE_WEBSOCKET_URL || 'ws://localhost:8090';
+      } else {
+        // 生产环境：动态构建 URL
+        const protocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        wsUrl = import.meta.env.VITE_WEBSOCKET_URL || `${protocol}//${location.host}/ws`;
+      }
+      
+      console.log('WebSocket URL:', wsUrl);
+      
       chatWS.value = new ChatWebSocket({
-        // url: `${location.protocol === 'https:' ? 'wss' : 'ws'}://${location.host}/ws/`, 
-        // 不要删除这个 到时候部署要用 cursor prompt
-         // 测试环境使用
-        url: `ws://localhost:8090/`,
+        url: wsUrl,
         token: wsToken,
         onMessage: (event) => {
           try {

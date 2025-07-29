@@ -1,5 +1,5 @@
 <template>
-  <teleport to="body">
+
     <!-- 抽屉模式 -->
     <div v-if="visible" class="group-detail-drawer-overlay">
     <div :class="['group-detail-drawer', { 'iphone-card-preview': isIPhonePreview }]" @click.stop>
@@ -428,7 +428,6 @@
         @cancel="cancelPermissionChange" />
     </div>
     </div>
-  </teleport>
 </template>
 
 <script setup>

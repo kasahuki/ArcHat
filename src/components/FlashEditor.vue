@@ -3,37 +3,31 @@
   <div class="flash-editor-container">
     <div v-if="editor" class="editor-toolbar">
       <div class="toolbar-left">
-        <button @click="editor.chain().focus().toggleBold().run()" :class="{ 'is-active': editor.isActive('bold') }" title="Bold">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M15.6 10.79c.97-.67 1.65-1.77 1.65-2.79c0-2.26-1.75-4-4-4H7v14h7.04c2.09 0 3.71-1.7 3.71-3.79c0-1.52-.86-2.82-2.15-3.42M10 6.5h3c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5h-3zm3.5 9H10v-3h3.5c.83 0 1.5.67 1.5 1.5s-.67 1.5-1.5 1.5"/></svg>
-        </button>
-        <button @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }" title="Italic">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M10 4v3h2.21l-3.42 8H6v3h8v-3h-2.21l3.42-8H18V4z"/></svg>
-        </button>
-        <button @click="editor.chain().focus().toggleStrike().run()" :class="{ 'is-active': editor.isActive('strike') }" title="Strikethrough">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M7.24 8.75c-.26-.48-.39-1.03-.39-1.67c0-.61.13-1.16.4-1.67c.26-.5.63-.93 1.11-1.29a5.73 5.73 0 0 1 1.7-.83c.66-.19 1.39-.29 2.18-.29c.81 0 1.54.11 2.21.34c.66.22 1.23.54 1.69.94c.47.4.83.88 1.08 1.43c.25.55.38 1.15.38 1.81h-3.01c0-.31-.05-.59-.15-.85c-.09-.27-.24-.49-.44-.68c-.2-.19-.45-.33-.75-.44c-.3-.1-.66-.16-1.06-.16c-.39 0-.74.04-1.03.13c-.29.09-.53.21-.72.36c-.19.16-.34.34-.44.55c-.1.21-.15.43-.15.66c0 .48.25.88.74 1.21c.38.25.77.48 1.41.7H7.39c-.05-.08-.11-.17-.15-.25M21 12v-2H3v2h9.62c.18.07.4.14.55.2c.37.17.66.34.87.51s.35.36.43.57c.07.2.11.43.11.69c0 .23-.05.45-.14.66c-.09.2-.23.38-.42.53c-.19.15-.42.26-.71.35c-.29.08-.63.13-1.01.13c-.43 0-.83-.04-1.18-.13c-.35-.09-.65-.22-.89-.39c-.25-.17-.44-.37-.59-.62c-.15-.24-.22-.5-.22-.78h-3.01c0 .72.13 1.39.4 1.96c.26.58.66 1.07 1.17 1.48c.51.41 1.15.73 1.9.95c.75.23 1.59.34 2.5.34c.85 0 1.64-.13 2.34-.38c.69-.25 1.29-.61 1.77-1.06c.49-.45.86-.98 1.13-1.58c.26-.6.4-1.25.4-1.95c0-.39-.04-.75-.12-1.06c-.08-.31-.21-.6-.38-.85c-.17-.25-.37-.48-.61-.67c-.24-.19-.52-.35-.82-.49L21 12z"/></svg>
-        </button>
+        <button @click="editor.chain().focus().toggleBold().run()" :class="{ 'is-active': editor.isActive('bold') }" title="Bold"><b>B</b></button>
+        <button @click="editor.chain().focus().toggleItalic().run()" :class="{ 'is-active': editor.isActive('italic') }" title="Italic"><i>I</i></button>
+        <button @click="editor.chain().focus().toggleUnderline().run()" :class="{ 'is-active': editor.isActive('underline') }" title="Underline"><u>U</u></button>
+        <button @click="editor.chain().focus().toggleStrike().run()" :class="{ 'is-active': editor.isActive('strike') }" title="Strikethrough"><s>S</s></button>
         <div class="toolbar-divider"></div>
-        <button @click="editor.chain().focus().toggleHeading({ level: 1 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }" title="Heading 1">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5 4v3h5.5v12h3V7H19V4z"/></svg>
-        </button>
-        <button @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }" title="Heading 2">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M3 4v3h5v12h3V7h5V4H3m9 14h8v-2h-5v-1l5-6V7h-8v2h5v1l-5 6v2Z"/></svg>
-        </button>
-        <button @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'is-active': editor.isActive('bulletList') }" title="Bullet List">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M7 5h14v2H7zm0 8v-2h14v2zm0 6v-2h14v2zM3 5a1 1 0 1 1 2 0a1 1 0 0 1-2 0zm0 6a1 1 0 1 1 2 0a1 1 0 0 1-2 0zm0 6a1 1 0 1 1 2 0a1 1 0 0 1-2 0z"/></svg>
-        </button>
-        <button @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'is-active': editor.isActive('orderedList') }" title="Ordered List">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M7 13v-2h14v2H7m0 6v-2h14v2H7M7 7V5h14v2H7M3 5v1.5h1V6h.5v.5H3V8h2V4H3v1m-1 8v4h3v-1H2v-.5h1V15H2v-.5h1V14H2v-.5h1V13H1m2.25 5.25A.75.75 0 0 0 2.5 17H1v1.5h1.5a.75.75 0 0 0 0 1.5H1V21h1.5a.75.75 0 0 0 .75-.75a.75.75 0 0 0-.75-.75a.75.75 0 0 0 .75-.75Z"/></svg>
-        </button>
-        <button @click="editor.chain().focus().toggleCodeBlock().run()" :class="{ 'is-active': editor.isActive('codeBlock') }" title="Code Block">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M8 3a2 2 0 0 0-2 2v4.586l-1.293-1.293a1 1 0 0 0-1.414 1.414L6.586 13L3.293 16.293a1 1 0 1 0 1.414 1.414L6 16.414V21a2 2 0 0 0 2 2h8a2 2 0 0 0 2-2V5a2 2 0 0 0-2-2H8zm2 4a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1zm0 4a1 1 0 0 1 1-1h2a1 1 0 1 1 0 2h-2a1 1 0 0 1-1-1z"/></svg>
+        <button @click="editor.chain().focus().toggleHeading({ level: 1 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 1 }) }" title="Heading 1">H1</button>
+        <button @click="editor.chain().focus().toggleHeading({ level: 2 }).run()" :class="{ 'is-active': editor.isActive('heading', { level: 2 }) }" title="Heading 2">H2</button>
+        <div class="toolbar-divider"></div>
+        <button @click="editor.chain().focus().toggleBulletList().run()" :class="{ 'is-active': editor.isActive('bulletList') }" title="Bullet List">&#x2022;</button>
+        <button @click="editor.chain().focus().toggleOrderedList().run()" :class="{ 'is-active': editor.isActive('orderedList') }" title="Ordered List">1.</button>
+        <button @click="editor.chain().focus().toggleBlockquote().run()" :class="{ 'is-active': editor.isActive('blockquote') }" title="Blockquote">&#x201C;&#x201D;</button>
+        <button @click="editor.chain().focus().toggleCodeBlock().run()" :class="{ 'is-active': editor.isActive('codeBlock') }" title="Code Block">&lt;/&gt;</button>
+        <div class="toolbar-divider"></div>
+        <button @click="editor.chain().focus().undo().run()" :disabled="!editor.can().undo()" title="Undo">&#x21A9;</button>
+        <button @click="editor.chain().focus().redo().run()" :disabled="!editor.can().redo()" title="Redo">&#x21AA;</button>
+        <div class="toolbar-divider"></div>
+        <button @click="emit('request-fullscreen')" title="Fullscreen">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M5 19h4v-2H7v-2H5v4zM5 7h2V5h2V3H5v4zm14 12h-4v2h4v-4h-2v2zm0-14h-2v2h-2v2h4V3z"/></svg>
         </button>
       </div>
       <div class="toolbar-right">
-        <button @click="saveContent" :disabled="!canSave" class="save-btn" title="Save">
-          <svg width="16" height="16" viewBox="0 0 24 24"><path fill="currentColor" d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V7l-4-4M12 19c-1.66 0-3-1.34-3-3s1.34-3 3-3s3 1.34 3 3s-1.34 3-3 3m3-10H5V5h10v4Z"/></svg>
-          Save
-        </button>
+        <danger-button @click="saveContent" :disabled="!canSave" type="gradient-green">
+        <span  style="display: flex;align-items: center; color: #c9ea63 !important;"><svg xmlns="http://www.w3.org/2000/svg" width="20"  viewBox="0 0 24 24"><!-- Icon from Material Symbols by Google - https://github.com/google/material-design-icons/blob/master/LICENSE --><path fill="currentColor" d="M5 21q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h11.175q.4 0 .763.15t.637.425l2.85 2.85q.275.275.425.638t.15.762V19q0 .825-.587 1.413T19 21zm7-3q1.25 0 2.125-.875T15 15t-.875-2.125T12 12t-2.125.875T9 15t.875 2.125T12 18m-5-8h7q.425 0 .713-.288T15 9V7q0-.425-.288-.712T14 6H7q-.425 0-.712.288T6 7v2q0 .425.288.713T7 10"/></svg> <b style="color: #fff; margin-left: 5px;">保存</b> </span>
+         
+           </danger-button>
       </div>
     </div>
     <editor-content :editor="editor" class="editor-content"/>
@@ -62,7 +56,9 @@ import ruby from 'highlight.js/lib/languages/ruby';
 import rust from 'highlight.js/lib/languages/rust';
 import swift from 'highlight.js/lib/languages/swift';
 import yaml from 'highlight.js/lib/languages/yaml';
-
+import Placeholder from '@tiptap/extension-placeholder';
+import Underline from '@tiptap/extension-underline';
+import dangerButton from '@/components/dangerButton.vue';
 // 创建 lowlight 实例
 const lowlight = createLowlight();
 
@@ -91,7 +87,7 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['update:modelValue', 'save-draft']);
+const emit = defineEmits(['update:modelValue', 'save-draft', 'request-fullscreen']);
 
 // 计算是否可以保存
 const canSave = computed(() => {
@@ -109,6 +105,9 @@ const editor = useEditor({
   },
   content: props.initialContent,
   extensions: [
+    Placeholder.configure({
+      placeholder: '开始记录你的想法...',
+    }),
     StarterKit.configure({
       codeBlock: false, // 禁用默认的代码块，使用带高亮的版本
     }),
@@ -119,6 +118,7 @@ const editor = useEditor({
     }).configure({
       lowlight,
     }),
+    Underline,
   ],
   onUpdate: ({ editor }) => {
     // 当内容变化时发出事件
@@ -132,7 +132,12 @@ const saveContent = () => {
     emit('save-draft', htmlContent);
   }
 };
-
+const clearContent = () => {
+  if(editor.value) {
+    editor.value.commands.setContent('');
+    localStorage.removeItem('flash-editor-draft');
+  }
+};
 // 暴露方法给父组件
 const setContent = (content) => {
   if (editor.value) {
@@ -149,7 +154,8 @@ const getContent = () => {
 
 defineExpose({
   setContent,
-  getContent
+  getContent,
+  clearContent
 });
 </script>
 
@@ -209,68 +215,63 @@ defineExpose({
 }
 
 .editor-toolbar button {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 12px;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  background: transparent;
+  font-family: 'Inter', sans-serif;
+  border: none;
+  background-color: transparent;
   color: #374151;
+  padding: 8px 12px;
+  margin: 0 2px;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   font-weight: 500;
-  transition: all 0.15s ease;
+  transition: background-color 0.2s, color 0.2s;
 }
 
 .editor-toolbar button:hover {
-  background: #e5e7eb;
-  color: #111827;
+  background-color: #f3f4f6;
 }
-
+:deep(.toolbar-right button) {
+  padding: 0 !important;
+}
+:deep(.toolbar-right button):hover  {
+  background-color: transparent !important;
+}
 .editor-toolbar button.is-active {
-  background: #3b82f6;
-  color: #ffffff;
-  border-color: #3b82f6;
+  background-color: #e0e7ff;
+  color: #3b82f6;
 }
 
-.save-btn {
-  background: #10b981 !important;
-  color: #ffffff !important;
-  border-color: #10b981 !important;
+.editor-toolbar button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
 }
 
-.save-btn:hover {
-  background: #059669 !important;
-  border-color: #059669 !important;
-}
 
-.save-btn:disabled {
-  background: #94a3b8 !important;
-  border-color: #94a3b8 !important;
-  color: #ffffff !important;
-  cursor: not-allowed !important;
-  opacity: 0.6;
-}
-
-.save-btn:disabled:hover {
-  background: #94a3b8 !important;
-  border-color: #94a3b8 !important;
-}
 
 .editor-content {
   padding: 70px; /* 调整内边距 */
   flex: 1; /* 占据剩余空间 */
   overflow-y: auto; /* 内部滚动 */
 }
-
+.editor-content :deep( a) {
+  color: #10b981 !important;
+}
 
 .editor-content :deep(.ProseMirror) {
-  min-height: 200px;
+  height: 500px;
   outline: none;
   font-size: 16px;
   line-height: 1.6;
   color: #374151;
+}
+
+.editor-content :deep(.ProseMirror p.is-editor-empty:first-child::before) {
+  content: attr(data-placeholder);
+  float: left;
+  color: #adb5bd;
+  pointer-events: none;
+  height: 0;
 }
 
 .editor-content :deep(.ProseMirror p) {

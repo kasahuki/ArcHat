@@ -7,7 +7,7 @@
           <div class="control-dot minimize" @click="toggleFullScreen"></div>
           <div class="control-dot expand"></div>
         </div>
-        <div class="modal-title">编辑笔记</div>
+        <div class="modal-title">Edit Now</div>
       </div>
 
       <div class="modal-content">
@@ -15,13 +15,15 @@
           <FlashEditor ref="editorRef" @input="handleEditorInput" @save-draft="handleSaveDraft" />
         </div>
       </div>
-
       <div class="modal-footer">
-        <button class="btn-secondary" @click="handleClose">取消</button>
-        <button class="btn-primary" :disabled="!canSave || isSubmitting" @click="handleSave">{{ isSubmitting ? '提交中...' : '提交' }}</button>
+        <danger-button @click="handleClose" type="orange">取消</danger-button>
+        <danger-button type="primary" :disabled="!canSave || isSubmitting" @click="handleSave">{{ isSubmitting ? '提交中...' : '提交' }}</danger-button>
       </div>
+     
     </div>
+    
   </div>
+  
 </template>
 
 <script setup>
@@ -31,6 +33,7 @@ import arcmessage from '../utils/ArcMessage.js';
 import { marked } from 'marked';
 import hljs from 'highlight.js';
 import ArcMessage from '../utils/ArcMessage.js';
+import DangerButton from '@/components/dangerButton.vue';
 
 const props = defineProps({
   visible: Boolean,
@@ -90,7 +93,7 @@ const handleEditorInput = (content) => {
 
 // 模拟调用后端API的函数
 const submitNoteToBackend = (note) => {
-  ArcMessage.info("提交成功",note.content)
+  ArcMessage.info("提交成功",note)
   console.log(note)
   
 };
@@ -158,43 +161,40 @@ watch(() => props.visible, (newVal) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1000;
+  z-index: 50000; /* Ensure it's on top */
   animation: fadeIn 0.2s ease-out;
 }
 .modal-container {
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  width: 90vw;
-  max-width: 900px;
-  max-height: 85vh; /* 恢复最大高度 */
-  
+  position: relative;
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  width: 50vw; /* Default width */
+  height: 80vh; /* Default height */
   display: flex;
   flex-direction: column;
-  transition: all 0.3s ease-out;
-  animation: slideIn 0.3s ease-out;
-  border-radius: 12px; /* 保持圆角 */
-  background-color: #f3f4f6;
+  animation: slideIn 0.3s forwards;
 }
 
 .modal-container.fullscreen {
-  width: calc(100vw - 40px); /* 留出边距 */
-  max-height: calc(100vh - 40px);
-  max-width: calc(100vw - 40px);
-  border-radius: 12px; /* 保持圆角 */
-  
+  width: 95vw; /* Fullscreen width */
+  height: 95vh; /* Fullscreen height */
 }
 .modal-content {
-  overflow: hidden; /* 确保内容区的滚动由其子元素处理 */
-  display: flex; /* 保持 flex 以便其子元素 .edit-section 能够继续使用 flex:1 */
+  flex: 1; /* 占据所有剩余空间 */
+  overflow-y: auto; /* 只在垂直方向滚动 */
+  display: flex;
   flex-direction: column;
+  min-height: 0; /* flexbox hack, to make it scrollable */
 }
 .modal-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
   padding: 12px 24px;
-  flex-shrink: 0;
-  position: sticky; /* 固定在顶部 */
-  top: 0;
+  flex-shrink: 0; /* 防止页眉收缩 */
+  position: relative; /* 移除 sticky，因为父级已经是 flex 布局 */
   z-index: 10;
 }
 
@@ -219,7 +219,7 @@ watch(() => props.visible, (newVal) => {
 .control-dot.expand { background-color: #27c93f; cursor: not-allowed; }
 
 .modal-title {
-  font-size: 16px;
+  font-size: 22px;
   font-weight: 600;
   color: #5586f0;
   text-align: center;
@@ -268,21 +268,12 @@ watch(() => props.visible, (newVal) => {
   justify-content: flex-end;
   gap: 12px;
   padding: 12px 24px;
-  flex-shrink: 0;
-  position: sticky; /* 固定在底部 */
-  bottom: 0;
-  border-top: 1px solid #e5e7eb; /* 添加分隔线 */
+  flex-shrink: 0; /* 防止页脚收缩 */
+  border-top: 1px solid #e5e7eb;
   z-index: 10;
-  
 }
 
-.btn-secondary, .btn-primary { padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.15s ease; }
-.btn-secondary { background: transparent; border: 1px solid #d1d5db; color: #374151; }
-.btn-secondary:hover { background: #f3f4f6; }
-.btn-secondary:disabled { background: #e5e7eb; border-color: #d1d5db; color: #6b7280; cursor: not-allowed; }
-.btn-primary { background: #3b82f6; border: 1px solid #3b82f6; color: #ffffff; }
-.btn-primary:hover { background: #2563eb; border-color: #2563eb; }
-.btn-primary:disabled { background: #94a3b8; border-color: #94a3b8; color: #ffffff; cursor: not-allowed; }
+
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -319,19 +310,7 @@ watch(() => props.visible, (newVal) => {
 }
 .dark-mode .btn-toggle-preview:hover { background: #4b5563; }
 
-.dark-mode .btn-secondary {
-  background: transparent;
-  border-color: #4b5563;
-  color: #d1d5db;
-}
-.dark-mode .btn-secondary:hover { background: #374151; }
 
-.dark-mode .btn-primary {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #ffffff;
-}
-.dark-mode .btn-primary:hover { background: #2563eb; border-color: #2563eb; }
 
 /* Preview Dark Mode */
 .dark-mode .preview-content :deep(h1), .dark-mode .preview-content :deep(h2) {

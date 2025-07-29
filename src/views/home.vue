@@ -210,8 +210,19 @@
       <!-- #endregion -->
 
       <!-- #region 右上角控制按钮 -->
-      <div class="theme-toggle-top">
+            <div class="theme-toggle-top" @mouseleave="hideDropdownWithDelay">
+        <el-button 
+          circle 
+          class="dropdown-grid-btn" 
+          data-tooltip="快捷导航"
+          @mouseenter="showDropdown"
+          :style="{ backgroundColor: 'transparent', ...dropdownBtnStyle }" 
+          ref="dropdownTriggerBtn">
 
+          <svg xmlns="http://www.w3.org/2000/svg" width="30" viewBox="0 0 512 512" :class="{ 'rotated': isDropDownVisible }" :style="{ color: dropdownIconFillColor }">
+            <path d="M256 48C141.125 48 48 141.125 48 256s93.125 208 208 208 208-93.125 208-208S370.875 48 256 48zm0 272l-96-96h192l-96 96z" fill="currentColor"/>
+          </svg>
+        </el-button>
         <el-dropdown trigger="click">
           <el-button circle class="apple-menu-btn">
             <div class="apple-dots">
@@ -251,14 +262,7 @@
           </template>
         </el-dropdown>
 
-        <el-button circle class="theme-toggle-btn" @click="toggleTheme" data-tooltip="切换主题">
-          <el-icon v-if="isDarkMode">
-            <Sunny />
-          </el-icon>
-          <el-icon v-else>
-            <Moon />
-          </el-icon>
-        </el-button>
+        <DayNightSwitch v-model="isDarkMode" data-tooltip="切换主题" />
 
         <div class="mac-window-controls">
           <button class="mac-btn close" @click="handleLogout" data-tooltip="退出登录">
@@ -292,9 +296,23 @@
             <Bell style="color: #fff;" />
           </el-icon>
         </el-button>
+        
+        <!-- 下拉网格按钮 -->
+       
       </div>
       <!-- #endregion -->
     </el-container>
+
+    <!-- DropdownGridBox 组件 -->
+      <DropdownGridBox 
+    :visible="isDropDownVisible" 
+    :is-dark-mode="isDarkMode" 
+    :position="dropdownPosition"
+    :sections="dropdownSections"
+    @close="isDropDownVisible = false"
+    @mouseenter="cancelHideDropdown"
+    @mouseleave="hideDropdownWithDelay"
+  />
 
     <!-- #region 弹窗组件 -->
     <!-- 添加全屏搜索弹窗 -->
@@ -419,6 +437,8 @@ import DangerButton from '@/components/dangerButton.vue';
 import { uploadImageFile } from '@/utils/fileHandler';
 import { loadMoreList } from '@/utils/paginatedListLoader';
 import WorningTips from '@/components/WorningTips.vue';
+import DayNightSwitch from '@/components/DayNightSwitch.vue';
+import DropdownGridBox from '@/components/DropdownGridBox.vue';
 const groupAvatarFile = ref(null);
 const groupAvatarPreview = ref('');
 const groupAvatarInput = ref(null);
@@ -492,6 +512,154 @@ const router = useRouter();
 const route = useRoute();
 const isDarkMode = ref(true);
 const isSidebarCollapse = ref(false);
+const isDropDownVisible = ref(false);
+const dropdownPosition = ref({ x: 0, y: 0 });
+const dropdownTriggerBtn = ref(null);
+
+// 动态计算下拉框位置
+const calculateDropdownPosition = () => {
+  if (!dropdownTriggerBtn.value) return;
+  
+  const btnElement = dropdownTriggerBtn.value.$el;
+  const btnRect = btnElement.getBoundingClientRect();
+  
+  // 下拉框宽度（与 CSS 中的 min-width 保持一致）
+    const dropdownWidth = 480;
+  
+  // 计算水平位置：按钮中心对齐下拉框中心
+  const btnCenterX = btnRect.left + btnRect.width / 2;
+  const dropdownX = btnCenterX - dropdownWidth / 2;
+  
+  // 计算垂直位置：按钮下方，留一些间距
+  const dropdownY = btnRect.bottom + 8;
+  
+  // 边界检查：确保不超出视口
+  const viewportWidth = window.innerWidth;
+  const finalX = Math.max(10, Math.min(dropdownX, viewportWidth - dropdownWidth - 10));
+  
+  dropdownPosition.value = {
+    x: finalX,
+    y: dropdownY
+  };
+};
+
+let hideTimer = null;
+
+// 显示下拉框
+const showDropdown = () => {
+  if (hideTimer) clearTimeout(hideTimer);
+  if (!isDropDownVisible.value) {
+    calculateDropdownPosition();
+    isDropDownVisible.value = true;
+  }
+};
+
+// 延迟隐藏下拉框
+const hideDropdownWithDelay = () => {
+  if (hideTimer) clearTimeout(hideTimer);
+  hideTimer = setTimeout(() => {
+    isDropDownVisible.value = false;
+  }, 200);
+};
+
+// 取消隐藏
+const cancelHideDropdown = () => {
+  if (hideTimer) clearTimeout(hideTimer);
+};
+
+// 下拉网格项目配置 - 使用 sections 结构
+const dropdownSections = ref([
+  {
+    title: '元素',
+    items: [
+      { 
+        name: 'All', 
+        icon: 'Grid3X3', 
+        action: () => {
+          ElMessage.info('查看所有元素');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Buttons', 
+        icon: 'MousePointer2', 
+        action: () => {
+          ElMessage.success('查看按钮组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Checkboxes', 
+        icon: 'CheckSquare', 
+        action: () => {
+          ElMessage.info('查看复选框组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Toggle switches', 
+        icon: 'ToggleLeft', 
+        action: () => {
+          ElMessage.info('查看开关组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Toggle switches', 
+        icon: 'ToggleLeft', 
+        action: () => {
+          ElMessage.info('查看开关组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Toggle switches', 
+        icon: 'ToggleLeft', 
+        action: () => {
+          ElMessage.info('查看开关组件');
+          isDropDownVisible.value = false;
+        }
+      }
+    ]
+  },
+  {
+    title: '挑战',
+    items: [
+      { 
+        name: 'Cards', 
+        icon: 'CreditCard', 
+        action: () => {
+          ElMessage.success('查看卡片组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Loaders', 
+        icon: 'Loader2', 
+        action: () => {
+          ElMessage.info('查看加载组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Inputs', 
+        icon: 'Type', 
+        action: () => {
+          ElMessage.info('查看输入框组件');
+          isDropDownVisible.value = false;
+        }
+      },
+      { 
+        name: 'Radio buttons', 
+        icon: 'Circle', 
+        action: () => {
+          ElMessage.info('查看单选按钮组件');
+          isDropDownVisible.value = false;
+        }
+      }
+    ]
+  }
+]);
 
 // 监听侧边栏状态变化
 watch(isSidebarCollapse, (newVal) => {
@@ -832,14 +1000,13 @@ onUnmounted(() => {
 // #endregion
 
 // #region 主题和UI控制
-const toggleTheme = () => {
-  isDarkMode.value = !isDarkMode.value;
-  if (isDarkMode.value) {
-    document.body.classList.add('dark-theme');
+watch(isDarkMode, (newVal) => {
+  if (newVal) {
+    document.documentElement.classList.add('dark');
   } else {
-    document.body.classList.remove('dark-theme');
+    document.documentElement.classList.remove('dark');
   }
-};
+});
 
 const handleMenuClick = (menu) => {
   if (menu.handler) {
@@ -1177,6 +1344,20 @@ const calendarBtnStyle = computed(() => ({
     : '0 2px 8px rgba(64, 158, 255, 0.18)',
   transition: 'background 0.3s',
 }));
+
+const dropdownBtnStyle = computed(() => ({
+  background: 'transparent',
+  border: 'none',
+  boxShadow: 'none'
+}));
+
+const dropdownIconFillColor = computed(() => {
+  if (isDropDownVisible.value) {
+    return isDarkMode.value ? '#818cf8' : '#a78bfa'; // Active color
+  } else {
+    return isDarkMode.value ? '#4f46e5' : '#7c3aed'; // Inactive color
+  }
+});
 // #endregion
 
 // #region 群聊功能
@@ -1976,12 +2157,15 @@ function getGroupSenderName(group) {
   transition: all 0.3s ease;
 }
 
-.calendar-btn {
+.calendar-btn,
+.dropdown-grid-btn {
   transition: background 0.3s;
 }
 
-.calendar-btn:hover {
+.calendar-btn:hover,
+.dropdown-grid-btn:hover {
   filter: brightness(1.1);
+  transform: scale(1.05);
 }
 
 .sign-dialog {
@@ -2247,5 +2431,17 @@ function getGroupSenderName(group) {
 .avatar-offline {
   filter: grayscale(1) brightness(0.8);
   opacity: 0.7;
+}
+
+.dropdown-grid-btn svg {
+  transition: transform 0.3s ease;
+}
+
+.dropdown-grid-btn svg.rotated {
+  transform: rotate(180deg);
+}
+
+.dropdown-grid-btn.el-button {
+  background-color: transparent !important;
 }
 </style>

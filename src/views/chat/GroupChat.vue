@@ -217,6 +217,7 @@
     <RightKeyPop
       v-if="showRightKeyPop"
       ref="rightKeyPopRef"
+      :calculating-position="isCalculatingPosition"
       :style="{
         position: 'fixed',
         left: rightKeyPopPosition.x + 'px',
@@ -360,6 +361,7 @@ const userDetailLoading = ref(false);
 const showRightKeyPop = ref(false)
 const rightKeyPopPosition = ref({ x: 0, y: 0 })
 const rightKeyPopMsg = ref(null)
+const isCalculatingPosition = ref(false);
 const rightKeyPopRef = ref(null)
 
 // 从父组件props获取好友列表
@@ -1207,14 +1209,47 @@ function handleRightClick(msg, event) {
   }
   menuItems.value = baseItems
   if (msg.side === 'right' || msg.side === 'left') {
-    showRightKeyPop.value = true
-    rightKeyPopPosition.value = { x: event.clientX, y: event.clientY }
-    rightKeyPopMsg.value = msg
+    isCalculatingPosition.value = true;
+    showRightKeyPop.value = true;
+    rightKeyPopMsg.value = msg;
+    // Render invisibly at the click position to calculate size
+    rightKeyPopPosition.value = { x: event.clientX, y: event.clientY };
+
     nextTick(() => {
-      if (rightKeyPopRef.value) rightKeyPopRef.value.focus && rightKeyPopRef.value.focus()
-    })
+      const menuEl = rightKeyPopRef.value?.$el;
+      if (!menuEl) return;
+
+      const rect = menuEl.getBoundingClientRect();
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+
+      let finalX = event.clientX;
+      let finalY = event.clientY;
+
+      // Horizontal positioning: if click is on the right half, show menu to the left of cursor
+      if (event.clientX > viewportWidth / 2) {
+        finalX = event.clientX - rect.width;
+      }
+
+      // Vertical positioning: if click is on the bottom half, show menu above cursor
+      if (event.clientY > viewportHeight / 2) {
+        finalY = event.clientY - rect.height;
+      }
+
+      // Edge clamping to prevent any part of the menu from going off-screen
+      if (finalX < 0) finalX = 5;
+      if (finalX + rect.width > viewportWidth) finalX = viewportWidth - rect.width - 5;
+      if (finalY < 0) finalY = 5;
+      if (finalY + rect.height > viewportHeight) finalY = viewportHeight - rect.height - 5;
+
+      // Set the final position and make it visible
+      rightKeyPopPosition.value = { x: finalX, y: finalY };
+      isCalculatingPosition.value = false;
+
+      if (rightKeyPopRef.value) rightKeyPopRef.value.focus?.();
+    });
   } else {
-    showRightKeyPop.value = false
+    showRightKeyPop.value = false;
   }
 }
 

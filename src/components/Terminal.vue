@@ -82,7 +82,7 @@ function copyCmd() {
 <style scoped>
 
 .wrap {
-  min-width: 344px;
+  min-width: 50%;
   display: flex;
   flex-direction: column;
   gap: 1rem;

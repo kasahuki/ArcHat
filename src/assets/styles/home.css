@@ -409,6 +409,7 @@ body {
   background: transparent;
   display: flex;
   gap: 12px;
+  align-items: center;
 }
 
 .el-dropdown-menu {

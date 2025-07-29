@@ -140,7 +140,7 @@ import {
   EditPen,
   ArrowRight
 } from '@element-plus/icons-vue'
-import AichatInput from '@/components/AiChatInput.vue'
+import AichatInput from '@/components/AichatInput.vue'
 import dangerButton from '@/components/dangerButton.vue'
 import { aiChatStream } from '@/api/aichat'
 import { ElMessage } from 'element-plus'

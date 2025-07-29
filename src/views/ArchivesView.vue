@@ -35,6 +35,7 @@
       </div>
     </div>
 
+    <div class="elegant-divider"></div>
 
         <!-- 闪念md卡片编辑器 -->
     <div class="drawing-board-outer">
@@ -49,12 +50,13 @@
         </div>
         <transition name="fade">
           <div v-if="showEditor" class="flash-editor-wrapper">
-            <FlashEditor @save="handleSaveNote" />
+            <FlashEditor ref="flashEditorRef" @save-draft="handleSaveNote" @request-fullscreen="openFullscreenEditor" />
           </div>
         </transition>
         <transition name="fade">
-          <div v-if="showEditor" class="notes-grid">
-            <div v-for="note in notes" :key="note.id" class="note-card" :ref="el => setNoteCardRef(el, note.id)" @click="editNote(note)">
+                            <div v-if="showEditor" ref="notesGridRef" class="notes-grid">
+
+                        <div v-for="note in notes" :key="note.id" class="note-card" :ref="el => setNoteCardRef(el, note.id)" @click.stop="editNote(note)" @contextmenu.prevent.stop="showContextMenu($event, note)">
               <div class="note-content" v-html="note.content"></div>
               <div class="note-actions">
                 <button @click.stop="editNote(note)" class="edit-note-btn" title="编辑">
@@ -65,6 +67,17 @@
             </div>
           </div>
         </transition>
+
+        <RightKeyPop
+          v-if="contextMenu.visible"
+          ref="rightKeyPopRef"
+          :calculating-position="contextMenu.isCalculating"
+          :left="contextMenu.x"
+          :top="contextMenu.y"
+          :items="contextMenuItems"
+          style="z-index: 10000;"
+          @close="hideContextMenu"
+        />
     
     <!-- 编辑弹窗 -->
     <NoteEditModal 
@@ -92,6 +105,26 @@
       @cancel="cancelDelete"
     />
     </div>
+
+    <!-- Fullscreen Editor Modal -->
+    <transition name="fade">
+      <div v-if="showFullscreenEditor" class="fullscreen-editor-overlay" @click.self="closeFullscreenEditor">
+      <div class="fullscreen-editor-container">
+        <div class="fullscreen-editor-header">
+          <div class="traffic-lights">
+            <button class="traffic-light red" @click="closeFullscreenEditor"></button>
+            <button class="traffic-light yellow"></button>
+            <button class="traffic-light green"></button>
+          </div>
+          <div class="fullscreen-editor-title">Arc Editor</div>
+        </div>
+        <FlashEditor ref="fullscreenEditorRef" @save-draft="handleFullscreenSave" />
+      </div>
+    </div>
+  </transition>
+
+    <div class="elegant-divider"></div>
+
     <!-- Todo List 板块 -->
     <div class="drawing-board-outer">
       <div class="drawing-board-apple" >
@@ -108,6 +141,7 @@
       </transition>
       </div>
     </div>
+
     <div class="drawing-board-outer" style="margin-bottom: 5rem;">
       <div class="drawing-board-apple" >
       <div class="drawing-board-header-apple">
@@ -122,11 +156,11 @@
       <ResourceDrawer :visible="showResourceDrawer" @close="showResourceDrawer = false" />
       </div>
     </div>
-    <div class="arc-water-header">
-      Trace Posts
-    </div>
-    <div style="display: flex; justify-content: center;   align-items: center; ; justify-content: space-around; ">
 
+    <div class="elegant-divider"></div>
+
+    <div  class="trace-post">
+  
       <img src="/src/assets/image/flashThought.svg" alt="" width="25%" >
       <Terminal :cmd="cmd" style="width: 50%;"/>
     </div>
@@ -156,17 +190,20 @@
 </template>
 <script setup>
 import { ref, computed, onMounted, onUnmounted, onUpdated, onBeforeUpdate, nextTick } from 'vue';
+import { dragAndDrop } from '@formkit/drag-and-drop/vue';
 import DangerButton from '@/components/dangerButton.vue';
-import EditorDrawer from '@/components/EditorDrawer.vue';
 import ResourceDrawer from '@/components/ResourceDrawer.vue';
+import RightKeyPop from '@/components/RightKeyPop.vue';
 import TodoList from '@/components/TodoList.vue';
 import { useTodoStore } from '@/stores/todo.js';
 import { EditPen, Edit, List, Files, Search } from '@element-plus/icons-vue';
+import { Copy, Pencil, Trash2, MoreVertical, Share2, FileText, Send } from 'lucide-vue-next';
 import FlashEditor from '@/components/FlashEditor.vue';
 import NoteEditModal from '@/components/NoteEditModal.vue';
 import WorningTips from '@/components/WorningTips.vue';
 import MacWindowControls from '@/components/MacWindowControls.vue';
 import Terminal from '@/components/Terminal.vue';
+import { watch } from 'vue';
 import ArcMessage from '@/utils/ArcMessage';
 const showDrawingBoard = ref(false);
 const isFullscreen = ref(false);
@@ -178,6 +215,159 @@ const editingNote = ref(null);
 const showEditModal = ref(false);
 const showWarningTip = ref(false);
 const noteToDeleteId = ref(null);
+const flashEditorRef = ref(null);
+const flashEditorWrapperRef = ref(null);
+const showFullscreenEditor = ref(false);
+const fullscreenEditorRef = ref(null);
+const rightKeyPopRef = ref(null);
+const notesGridRef = ref(null);
+
+const contextMenu = ref({
+  visible: false,
+  x: 0,
+  y: 0,
+  note: null,
+  items: [],
+  isCalculating: false
+});
+
+const contextMenuItems = computed(() => {
+  const note = contextMenu.value.note;
+  if (!note) return [];
+
+  return [
+    {
+      key: 'copy',
+      label: '复制内容',
+      icon: Copy,
+      onClick: () => {
+        const textToCopy = new DOMParser().parseFromString(note.content, 'text/html').body.textContent || '';
+        navigator.clipboard.writeText(textToCopy).then(() => {
+          ArcMessage.success('内容复制成功！');
+        }).catch(err => {
+          ArcMessage.error('复制失败，请手动复制。');
+          console.error('Copy failed:', err);
+        });
+      },
+    },
+    {
+      key: 'edit',
+      label: '编辑笔记',
+      icon: Pencil,
+      onClick: () => {
+        editingNote.value = note;
+        showEditModal.value = true;
+      },
+    },
+    {
+      key: 'delete',
+      label: '删除卡片',
+      icon: Trash2,
+      danger: true,
+      onClick: () => {
+        if (note) {
+          deleteNote(note.id);
+        }
+      },
+      separatorAfter: true,
+    },
+    {
+      key: 'more-actions',
+      label: '更多操作',
+      icon: MoreVertical,
+      children: [
+        {
+          key: 'share',
+          label: '分享笔记',
+          icon: Share2,
+          onClick: () => {
+            ArcMessage.info('分享功能待实现');
+          }
+        },
+        {
+          key: 'export',
+          label: '导出为PDF',
+          icon: FileText,
+          onClick: () => {
+            ArcMessage.info('导出为PDF功能待实现');
+          }
+        },
+        {
+          key: 'submit',
+          label: '提交笔记',
+          icon: Send,
+          onClick: () => {
+            ArcMessage.info('提交笔记功能待实现');
+          }
+        }
+      ]
+    },
+  ];
+});
+
+const showContextMenu = (event, note) => {
+  event.preventDefault();
+
+  contextMenu.value.isCalculating = true;
+  contextMenu.value.note = note;
+  contextMenu.value.visible = true;
+  // Render invisibly at the click position to calculate size
+  contextMenu.value.x = event.clientX;
+  contextMenu.value.y = event.clientY;
+
+  nextTick(() => {
+    const menuEl = rightKeyPopRef.value?.$el;
+    if (!menuEl) return;
+
+    const rect = menuEl.getBoundingClientRect();
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    let finalX = event.clientX;
+    let finalY = event.clientY;
+
+    // Horizontal positioning
+    if (event.clientX > viewportWidth / 2) {
+      finalX = event.clientX - rect.width;
+    }
+
+    // Vertical positioning
+    if (event.clientY > viewportHeight / 2) {
+      finalY = event.clientY - rect.height;
+    }
+
+    // Edge clamping
+    if (finalX < 0) finalX = 5;
+    if (finalX + rect.width > viewportWidth) finalX = viewportWidth - rect.width - 5;
+    if (finalY < 0) finalY = 5;
+    if (finalY + rect.height > viewportHeight) finalY = viewportHeight - rect.height - 5;
+
+    // Set the final position and make it visible
+    contextMenu.value.x = finalX;
+    contextMenu.value.y = finalY;
+    contextMenu.value.isCalculating = false;
+
+    window.addEventListener('click', hideContextMenu, { once: true });
+    window.addEventListener('contextmenu', hideContextMenu, { once: true });
+  });
+};
+
+const hideContextMenu = () => {
+  if (contextMenu.value.visible) {
+    contextMenu.value.visible = false;
+    contextMenu.value.note = null;
+    window.removeEventListener('click', hideContextMenu);
+    window.removeEventListener('contextmenu', hideContextMenu);
+  }
+};
+
+
+const handleKeydown = (e) => {
+  if (e.key === 'Escape' && showFullscreenEditor.value) {
+    closeFullscreenEditor();
+  }
+};
+
 
 const getNoteSizeFromContent = (content) => {
   const text = new DOMParser().parseFromString(content, 'text/html').body.textContent || '';
@@ -187,18 +377,57 @@ const getNoteSizeFromContent = (content) => {
   return 'large';
 };
 
+
+
 onMounted(() => {
+  window.addEventListener('keydown', handleKeydown);
+
   const savedNotes = localStorage.getItem('flash-notes');
   if (savedNotes) {
     const parsedNotes = JSON.parse(savedNotes);
-    // 为旧笔记添加 size 属性
     notes.value = parsedNotes.map(note => ({
       ...note,
       size: note.size || getNoteSizeFromContent(note.content)
     }));
-    // 更新 localStorage
-    localStorage.setItem('flash-notes', JSON.stringify(notes.value));
   }
+
+  if (notesGridRef.value) {
+    dragAndDrop({
+      parent: notesGridRef.value,
+      values: notes,
+      handleEnd: () => {
+        localStorage.setItem('flash-notes', JSON.stringify(notes.value));
+      },
+    });
+  }
+});
+
+// 控制编辑器仅在聚焦时滚动
+const handleEditorWheel = (event) => {
+  const wrapper = flashEditorWrapperRef.value;
+  if (wrapper && !wrapper.contains(document.activeElement)) {
+    event.preventDefault();
+  }
+};
+
+watch(showEditor, (isShown) => {
+  nextTick(() => {
+    const wrapper = flashEditorWrapperRef.value;
+    if (wrapper) {
+      if (isShown) {
+        wrapper.addEventListener('wheel', handleEditorWheel, { passive: false });
+      } else {
+        wrapper.removeEventListener('wheel', handleEditorWheel);
+      }
+    }
+  });
+});
+
+onUnmounted(() => {
+  window.removeEventListener('keydown', handleKeydown);
+  // 组件卸载时，确保清理事件监听器
+  window.removeEventListener('click', hideContextMenu);
+  window.removeEventListener('contextmenu', hideContextMenu);
 });
 
 const todoStore = useTodoStore();
@@ -308,7 +537,8 @@ const handleSaveNote = (content) => {
   };
   notes.value.unshift(newNote);
   localStorage.setItem('flash-notes', JSON.stringify(notes.value));
-  ArcMessage.success('闪念记录成功');
+  ArcMessage.info("保存修改成功","请尽快提交结果")
+  flashEditorRef.value.clearContent();
 };
 
 const deleteNote = (noteId) => {
@@ -347,6 +577,28 @@ const handleEditSave = (updatedNote) => {
 const closeEditModal = () => {
   showEditModal.value = false;
   editingNote.value = null;
+};
+
+const openFullscreenEditor = async () => {
+  if (!flashEditorRef.value) return;
+  const content = await flashEditorRef.value.getContent();
+  showFullscreenEditor.value = true;
+  await nextTick();
+  if (fullscreenEditorRef.value) {
+    fullscreenEditorRef.value.setContent(content);
+  }
+};
+
+const closeFullscreenEditor = () => {
+  showFullscreenEditor.value = false;
+};
+
+const handleFullscreenSave = async (content) => {
+  if (flashEditorRef.value) {
+    flashEditorRef.value.setContent(content);
+  }
+  await handleSaveNote(content);
+  closeFullscreenEditor();
 };
 
 const glassBtns = [
@@ -391,6 +643,23 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+/* Fullscreen Editor Transition */
+.fade-scale-enter-active,
+.fade-scale-leave-active {
+  transition: all 0.3s ease;
+}
+
+.fade-scale-enter-from,
+.fade-scale-leave-to {
+  opacity: 0;
+  transform: scale(0.95);
+}
+
+.fade-scale-enter-to,
+.fade-scale-leave-from {
+  opacity: 1;
+  transform: scale(1);
+}
 @import '@/assets/styles/archives.night.css';
 .arc-water-header {
   font-size: 2rem;
@@ -402,6 +671,19 @@ onUnmounted(() => {
 .arc-water-search {
   width: 30rem;
   margin-bottom: 1rem;
+}
+.trace-post {
+  margin: 12rem;
+  background-color: #000511;
+  display: flex;
+  justify-content: space-around;
+  align-items: center;
+  padding: 5rem;
+  border-radius: 12px;
+  box-shadow: 0 1px 4px rgba(60,60,60,0.06);
+  margin-bottom: 1rem;
+  width: 100%;
+
 }
 .arc-water-container {
   display: flex;
@@ -422,15 +704,29 @@ onUnmounted(() => {
 
 }
 .flash-footer {
+
   position: relative;
-  margin-top: 5rem;
+  margin-top: 12rem;
   height: 500px;
   width: 100%;
   background: #ffffff ;
   border-radius: 12px;
   box-shadow: 0 8px 32px 0 rgba(6, 607, 235, 0.1), 0 1.5px 4px 0 rgba(7, 43, 245, 0.04);
 }
+.elegant-divider {
+  width: 80%;
+  height: 1px;
+  background: linear-gradient(to right, transparent, #e0e0e0, transparent);
+  margin: 4rem auto;
+  border: 0;
+}
+
+.dark-mode .elegant-divider {
+  background: linear-gradient(to right, transparent, #374151, transparent);
+}
+
 .archives-root {
+  
   min-height: 1500px;
   width: 88%;
   margin: 0 auto;
@@ -498,7 +794,6 @@ onUnmounted(() => {
   padding: 12px 16px;
   border-radius: 12px;
   background: rgba(71, 204, 31, 0.95);
-  box-shadow: 0 8px 32px 0 rgba(60, 60, 60, 0.10), 0 1.5px 4px 0 rgba(0, 0, 0, 0.04);
 }
 
 .drawing-board-header-apple h1 {
@@ -619,10 +914,27 @@ onUnmounted(() => {
 
 /* Flash Editor 高度限制 */
 .flash-editor-wrapper {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
   max-height: 500px; /* 限制编辑器最大高度 */
   overflow: hidden; /* 移除外层滚动，让内部处理 */
   border-radius: 12px;
   box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.flash-editor-wrapper :deep(.flash-editor-container) {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  /* 让编辑器容器填满剩余空间 */
+  min-height: 0;
+}
+
+.flash-editor-wrapper :deep(.editor-content) {
+  flex-grow: 1;
+  overflow-y: auto;
+  /* 仅内容区滚动 */
 }
 
 .notes-grid {
@@ -636,21 +948,25 @@ onUnmounted(() => {
 
 .note-card {
   margin-top: 2rem;
-  background-color: #fff;
-  border-radius: 12px;
-  padding: 1rem;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-  position: relative;
+  background: rgba(251, 255, 250, 0.95); /* 高透明毛玻璃 */
+    -webkit-backdrop-filter: blur(12px) saturate(180%);
+  border-radius: 16px; /* More rounded corners */
+  padding: 1.5rem; /* More padding */
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
   cursor: pointer;
-  transition: all 0.2s ease;
-  position: relative; /* 确保伪元素正确定位 */
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              box-shadow 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              border-color 0.3s ease;
   display: flex;
   flex-direction: column;
+
+  
 }
 
 .note-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  transform: translateY(-5px) scale(1.01); /* More pronounced lift and slight scale */
+  border-color: #a5b4fc; /* Indigo accent on hover */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
 .note-content {
@@ -659,7 +975,9 @@ onUnmounted(() => {
   overflow: hidden;   /* Hide the overflowing content */
   position: relative;
 }
-
+.note-content :deep(a) {
+  color: #10b981 !important;
+}
 /* 当内容溢出时，在内容区底部添加一个渐变蒙层提示用户 */
 .note-card.is-overflowing .note-content::after {
   content: '';
@@ -742,13 +1060,15 @@ onUnmounted(() => {
 
 /* Dark Mode Styles */
 .dark-mode .note-card {
-  background-color: #1f2937; /* 深灰蓝背景 */
-  border-color: #374151;
-  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  background-color: rgba(27, 24, 37, 0.95); /* Dark slate gray with 95% opacity */
+  border: none; /* Darker border */
+  
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2), 0 4px 6px -2px rgba(0, 0, 0, 0.15);
 }
 
 .dark-mode .note-card:hover {
-    border-color: #4f46e5;
+  border-color: #6366f1; /* Brighter Indigo for dark mode hover */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
 }
 
 .dark-mode .note-content :deep(p) {
@@ -826,5 +1146,83 @@ onUnmounted(() => {
 }
 .dark-mode .edit-note-btn:hover {
   background: rgba(59, 130, 246, 0.2) !important;
+}
+
+/* Fullscreen Editor Styles */
+.fullscreen-editor-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 50000;
+}
+
+.fullscreen-editor-container {
+  position: relative;
+  width: 90vw;
+  height: 90vh;
+  background-color: var(--bg-color, #fff);
+  border-radius: 16px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.fullscreen-editor-header {
+  display: flex;
+  align-items: center;
+  padding: 12px;
+  background-color: var(--header-bg-color, #f0f0f0);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.dark-mode .fullscreen-editor-header {
+  background-color: #2d3748;
+  border-bottom: 1px solid #4a5568;
+}
+
+.traffic-lights {
+  display: flex;
+  gap: 8px;
+}
+
+.traffic-light {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  cursor: pointer;
+}
+
+.traffic-light.red { background-color: #ff5f56; }
+.traffic-light.yellow { background-color: #ffbd2e; }
+.traffic-light.green { background-color: #27c93f; }
+
+.fullscreen-editor-title {
+  color: var(--text-color, #333);
+  font-weight: 600;
+  margin: 0 auto;
+  transform: translateX(-18px); /* Adjust for traffic lights width */
+}
+
+.dark-mode .fullscreen-editor-title {
+  color: #e2e8f0;
+}
+
+.fullscreen-editor-container :deep(.flash-editor-container) {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+.fullscreen-editor-container :deep(.editor-content) {
+  flex-grow: 1;
+  overflow-y: auto;
 }
 </style>

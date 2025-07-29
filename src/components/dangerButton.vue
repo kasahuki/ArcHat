@@ -1,5 +1,5 @@
 <template>
-  <button type="button" :class="['custom-button', `custom-button--${type}`]">
+  <button type="button" :class="['custom-button', `custom-button--${type}`]" :disabled="disabled">
     <span class="shadow"></span>
     <span class="edge"></span>
     <span class="front text">
@@ -19,11 +19,20 @@ defineProps({
       'gradient-blue', 'gradient-purple', 'gradient-green', 'gradient-orange',
       'gradient-pink', 'gradient-cyan', 'gradient-teal', 'gradient-yellow'
     ].includes(value)
+  },
+  disabled: {
+    type: Boolean,
+    default: false
   }
 });
 </script>
 
 <style scoped>
+.custom-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
 /* From Uiverse.io by cssbuttons-io */ 
 .custom-button {
  position: relative;
