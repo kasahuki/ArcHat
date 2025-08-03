@@ -109,11 +109,11 @@
 <script setup>
 import { ref, reactive } from 'vue'
 import { User, Lock } from '@element-plus/icons-vue'
-import { ElMessage } from 'element-plus'
 import { useRouter } from 'vue-router'
 import { registerService, loginService } from '@/api/user'
 import { useUserInfoStore } from '@/stores/user'
 import DangerButton from '@/components/dangerButton.vue'
+import ArcMessage from '@/utils/ArcMessage'
 
 // State
 const showRegister = ref(false)
@@ -144,7 +144,7 @@ const toggleForm = () => {
 const handleLogin = async () => {
   try {
     if (!loginForm.username || !loginForm.password) {
-      ElMessage.error('请填写完整的登录信息')
+      ArcMessage.error('请填写完整的登录信息')
       return
     }
     
@@ -154,7 +154,7 @@ const handleLogin = async () => {
     })
     
     if (res.code === 200) {
-      ElMessage.success('登录成功')
+      ArcMessage.success('登录成功')
       // 使用 store 存储用户信息
       userInfoStore.setUserInfo(res.data)
       // 登录成功后建立 WebSocket 连接
@@ -162,28 +162,26 @@ const handleLogin = async () => {
       // 跳转到首页
       router.push('/userHub')
     } else {
-      ElMessage.error(res.msg || '登录失败')
+     
     }
   } catch (error) {
-    ElMessage.error('登录失败，请稍后重试')
-    console.error('登录错误:', error)
   }
 }
 
 const handleRegister = async () => {
   try {
     if (!registerForm.username || !registerForm.password || !registerForm.confirmPassword) {
-      ElMessage.error('请填写完整的注册信息')
+      ArcMessage.error('请填写完整的注册信息')
       return
     }
     
     if (registerForm.password !== registerForm.confirmPassword) {
-      ElMessage.error('两次输入的密码不一致')
+      ArcMessage.error('两次输入的密码不一致')
       return
     }
 
     if (registerForm.password.length < 6 || registerForm.password.length > 20) {
-      ElMessage.error('密码长度必须在6-20位之间')
+      ArcMessage.error('密码长度必须在6-20位之间')
       return
     }
     
@@ -194,7 +192,7 @@ const handleRegister = async () => {
     })
     
     if (res.code === 200) {
-      ElMessage.success('注册成功')
+      ArcMessage.success('注册成功')
       // 切换到登录表单
       showRegister.value = false
       // 清空注册表单
@@ -202,10 +200,10 @@ const handleRegister = async () => {
       registerForm.password = ''
       registerForm.confirmPassword = ''
     } else {
-      ElMessage.error(res.msg || '注册失败')
+      ArcMessage.error(res.msg || '注册失败')
     }
   } catch (error) {
-    ElMessage.error('注册失败，请稍后重试')
+    ArcMessage.error('注册失败，请稍后重试')
     console.error('注册错误:', error)
   }
 }

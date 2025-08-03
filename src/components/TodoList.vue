@@ -293,11 +293,15 @@ function handleReorderTodo(newList) {
 <style scoped>
 .todo-list-root {
   background: #fff;
-  border-radius: 18px;
+  border-radius: 0 0 18px 18px ;
   box-shadow: 0 8px 32px 0 rgba(60,60,60,0.10), 0 1.5px 4px 0 rgba(0,0,0,0.04);
   padding: 32px 32px 24px 32px;
   margin: 0 auto;
   transition: box-shadow 0.2s, border-radius 0.2s;
+}
+.dark-mode .todo-list-root {
+  background: #171b2b;
+  box-shadow: none;
 }
 .todo-category-tabs {
   display: flex;
@@ -364,13 +368,15 @@ function handleReorderTodo(newList) {
   box-shadow: 0 1px 4px rgba(60,60,60,0.06);
   transition: box-shadow 0.18s;
 }
+.dark-mode .todo-input {
+  background: #1b223d;
+  color: #fff;
+}
 .todo-input:focus {
   box-shadow: 0 4px 16px rgba(60,60,60,0.13);
 }
 
-.todo-add-btn:hover {
-  box-shadow: 0 4px 16px rgba(60,60,60,0.13);
-}
+
 .todo-list {
   list-style: none;
   padding: 0;
@@ -387,15 +393,26 @@ function handleReorderTodo(newList) {
   transition: box-shadow 0.18s, background 0.18s, transform 0.18s;
   position: relative;
 }
+.dark-mode .todo-list li {
+  color: #fff;
+  background: #171b2b;
+}
 .todo-list li:hover {
-  box-shadow: 0 4px 16px rgba(60,60,60,0.13);
   background: #f0f3ff;
+  box-shadow: 0 4px 16px rgba(60,60,60,0.13);
+}
+.dark-mode .todo-list li:hover {
+  box-shadow: 0 4px 16px rgba(60,60,60,0.13);
+  background: #0e173b;
 }
 .todo-list li.selected {
   box-shadow: 0 12px 32px 0 rgba(83,113,247,0.18), 0 2px 8px 0 rgba(0,0,0,0.08);
   background: #eaf0ff;
   transform: translateY(-6px) scale(1.03) perspective(400px) rotateX(2deg);
   z-index: 2;
+}
+.dark-mode .todo-list li.selected {
+  background: #171b2b;
 }
 .todo-list li.dragging {
   box-shadow: 0 16px 40px 0 rgba(83,113,247,0.22), 0 4px 12px 0 rgba(0,0,0,0.10);
@@ -411,6 +428,10 @@ function handleReorderTodo(newList) {
 .todo-list li.editing {
   background: #eaf0ff;
 }
+.dark-mode .todo-list li.editing {
+  background: #171b2b;
+}
+
 .todo-checkbox {
   margin-right: 16px;
   position: relative;
@@ -466,6 +487,11 @@ function handleReorderTodo(newList) {
   margin-right: 8px;
   box-shadow: 0 1px 4px rgba(60,60,60,0.06);
 }
+.dark-mode .todo-edit-input {
+  background: #292d3a;
+  color: #fff;
+}
+
 .todo-text {
   flex: 1;
   font-size: 1.08rem;
@@ -474,6 +500,9 @@ function handleReorderTodo(newList) {
   word-break: break-all;
   cursor: pointer;
   user-select: text;
+}
+.dark-mode .todo-text {
+  color: #fff;
 }
 .todo-date {
   font-size: 0.95rem;
@@ -579,10 +608,14 @@ function handleReorderTodo(newList) {
   background-size: 16px;
   padding-right: 32px;
 }
+.dark-mode .todo-category-select {
+  border-color: #1f1c2e;
+}
 .todo-category-select:focus {
   box-shadow: 0 4px 16px rgba(83,113,247,0.13);
   border-color: #5371f7;
 }
+
 .todo-category-select:hover {
   border-color: #5371f7;
   box-shadow: 0 3px 12px rgba(83,113,247,0.12);

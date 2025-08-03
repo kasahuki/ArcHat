@@ -16,8 +16,17 @@
         </div>
       </div>
       <div class="modal-footer">
-        <danger-button @click="handleClose" type="orange">取消</danger-button>
-        <danger-button type="primary" :disabled="!canSave || isSubmitting" @click="handleSave">{{ isSubmitting ? '提交中...' : '提交' }}</danger-button>
+        <div class="footer-left">
+          <div class="word-count-display" v-if="editorRef">
+            <span class="word-count-label">字数:</span>
+            <span class="word-count-number">{{ editorStats.characters }}</span>
+          
+          </div>
+        </div>
+        <div class="footer-right">
+          <danger-button @click="handleClose" type="orange">取消</danger-button>
+          <danger-button type="primary" :disabled="!canSave || isSubmitting" @click="handleSave">{{ isSubmitting ? '提交中...' : '提交' }}</danger-button>
+        </div>
       </div>
      
     </div>
@@ -34,7 +43,6 @@ import { marked } from 'marked';
 import hljs from 'highlight.js';
 import ArcMessage from '../utils/ArcMessage.js';
 import DangerButton from '@/components/dangerButton.vue';
-
 const props = defineProps({
   visible: Boolean,
   note: Object
@@ -49,8 +57,21 @@ const isSubmitting = ref(false);
 
 // 计算是否可以保存
 const canSave = computed(() => {
-  const plainText = new DOMParser().parseFromString(editorContent.value || '', 'text/html').body.textContent || "";
-  return plainText.trim().length > 0;
+  return editorContent.value && editorContent.value.trim().length > 0;
+});
+
+// 计算编辑器内容统计
+const editorStats = computed(() => {
+  if (!editorRef.value) return { characters: 0, };
+  
+  try {
+    const stats = editorRef.value.contentStats;
+    return stats || { characters: 0 };
+  } catch (error) {
+    const html = editorContent.value || '';
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+  }
 });
 
 // 配置marked以使用highlight.js
@@ -62,13 +83,7 @@ marked.setOptions({
   langPrefix: 'hljs language-',
 });
 
-const renderedContent = computed(() => {
-  if (isPreviewMode.value && editorRef.value) {
-    const content = editorRef.value.getContent();
-    return marked(content);
-  }
-  return '';
-});
+
 
 const handleClose = () => {
   emit('close');
@@ -170,7 +185,7 @@ watch(() => props.visible, (newVal) => {
   border-radius: 12px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
   transition: all 0.3s ease;
-  width: 50vw; /* Default width */
+  width: 60vw; /* Default width */
   height: 80vh; /* Default height */
   display: flex;
   flex-direction: column;
@@ -265,19 +280,63 @@ watch(() => props.visible, (newVal) => {
 
 .modal-footer {
   display: flex;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
   gap: 12px;
   padding: 12px 24px;
   flex-shrink: 0; /* 防止页脚收缩 */
   border-top: 1px solid #e5e7eb;
-  z-index: 10;
 }
 
+.footer-left {
+  flex: 1;
+}
 
+.footer-right {
+  display: flex;
+  gap: 12px;
+}
 
-@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-@keyframes slideIn { from { opacity: 0; transform: translateY(-20px) scale(0.95); } to { opacity: 1; transform: translateY(0) scale(1); } }
+/* Word Count Display Styles */
+.word-count-display {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  position: relative;
+  margin-right: 0;
+}
 
+.word-count-label {
+  color: #6b7280;
+  font-weight: 500;
+}
+
+.word-count-number {
+  color: #3b82f6;
+  font-weight: 600;
+  font-family: monospace;
+}
+
+.word-count-detail {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgb(68, 68, 68);
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  padding: 8px;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  font-size: 11px;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  transform: translateY(-5px);
+}
 
 
 /* Dark Mode Styles */

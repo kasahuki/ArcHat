@@ -35,7 +35,7 @@
             <span class="value">{{ group.owner || "senjay" }}</span>
           </div>
           <div class="detail-item">
-            <span class="label">群描述</span>
+            <span class="label">群公告</span>
             <span class="value group-desc-ellipsis">{{ (group.groupDesc && group.groupDesc.length > 50) ? group.groupDesc.slice(0, 50) + '…' : (group.groupDesc || '暂无公告…') }}</span>
           </div>
         </div>

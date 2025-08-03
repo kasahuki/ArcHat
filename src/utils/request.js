@@ -36,6 +36,7 @@ instance.interceptors.request.use(
 // const router = useRouter()
 // useRouter 只能在 Vue 组件的上下文中使用，不能在普通的 JavaScript 文件或模块中使用 而router 在vue和js中都可以使用
 import router from '@/router';
+import ArcMessage from './ArcMessage';
 // 添加响应拦截器
 instance.interceptors.response.use(
     result => {
@@ -47,7 +48,7 @@ instance.interceptors.response.use(
 
         //操作失败
         // alert(result.data.msg?result.data.msg:'服务异常')
-        ElMessage.error(result.data.msg?result.data.msg:'服务异常！！！！')
+        ArcMessage.error(result.data.msg?result.data.msg:'服务异常！！！！')
         console.log(result)
 
         //异步操作的状态转换为失败
@@ -65,7 +66,6 @@ instance.interceptors.response.use(
             router.push('/404NotFound')
         }
         else{
-            ElMessage.error('服务异常！！！')
         }
        
         return Promise.reject(err);//异步的状态转化成失败的状态 

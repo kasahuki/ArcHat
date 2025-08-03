@@ -1,21 +1,22 @@
 <template>
-<!-- From Uiverse.io by rzouga001 --> 
-<div class="card"> 
-  <button class="dismiss" type="button" @click="$emit('close')">×</button> 
-  <div class="header"> 
-
-<div class="div_image_v">
-    <div class="image">
-      <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><g id="SVGRepo_bgCarrier" stroke-width="0"></g><g id="SVGRepo_tracerCarrier" stroke-linecap="round" stroke-linejoin="round"></g><g id="SVGRepo_iconCarrier"> <path d="M20 7L9.00004 18L3.99994 13" stroke="#000000" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"></path> </g></svg>
-      </div> 
-  </div> 
+  <div class="card">
+    <div class="header">
+      <button class="dismiss" type="button" @click="$emit('close')">×</button>
+      <div class="image">
+        <div class="icon-wrapper">
+          <div class="glow"></div>
+          <svg class="checkmark-svg" width="80" height="80" viewBox="0 0 52 52" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="26" cy="26" r="25" fill="#4CAF50"/>
+            <path class="checkmark-path" d="M14 27l7.5 7.5L38 18" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          </svg>
+        </div>
+      </div>
       <div class="content">
-         <span class="title">{{ title }}</span> 
-         <p class="message">{{ message }}</p> 
-         </div> 
-       
-            </div> 
-            </div>
+        <span class="title">{{ title }}</span>
+        <p class="message">{{ message }}</p>
+      </div>
+    </div>
+  </div>
 </template>
 
 <script setup>
@@ -32,114 +33,137 @@ defineProps({
 
 defineEmits(['close']);
 </script>
+
 <style scoped>
-/* From Uiverse.io by rzouga001 */ 
+/* From Uiverse.io by rzouga001 */
 .card {
-  scale: 1.5;
-  padding: 0;
-  overflow: hidden;
-  position: relative;
-  text-align: left;
-  border-radius: 0.5rem;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  background-color: #fff;
-  animation: slideIn 0.4s ease-out;
-  transform-origin: center;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: transparent;
+
+  width: 380px;
+  border: 0;
+  border-radius: 24px;
+  box-shadow: 0 16px 48px 0 rgba(0, 0, 0, 0.15);
+  padding: 40px;
+  text-align: center;
+  animation: fadeInScale 0.5s cubic-bezier(0.165, 0.84, 0.44, 1) forwards, bobbing 3s ease-in-out infinite;
+  z-index: 10000;
+}
+.dark-mode .card {
+  background-color: transparent;
+  border: 0 ;
+}
+@keyframes fadeInScale {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+  }
 }
 
-@keyframes slideIn {
+@keyframes bobbing {
   0% {
-    opacity: 0;
-    transform: scale(0.8) translateY(-20px);
+    transform: translate(-50%, -50%) translateY(0px);
+  }
+  50% {
+    transform: translate(-50%, -50%) translateY(-10px);
   }
   100% {
-    opacity: 1;
-    transform: scale(1) translateY(0);
+    transform: translate(-50%, -50%) translateY(0px);
   }
-}
-
-.div_image_v {
-  background: #47c9a2;
-  border-bottom: none;
-  position: relative;
-  text-align: center;
-  margin: -20px -20px 0;
-  border-radius: 5px 5px 0 0;
-  padding: 35px;
 }
 
 .dismiss {
-  z-index: 1000000;
   position: absolute;
-  right: 1px;
-  top: 1px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #D1D5DB;
-  font-size: 1rem;
-  font-weight: 300;
-  border-radius: 7px;
-  transition: .3s ease;
+  top: 10px;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  font-size: 20px;
+  color: #ccc;
+  transition: color 0.2s ease, transform 0.2s ease;
 }
 
 .dismiss:hover {
-  background-color: #ee0d0d;
-  border: 2px solid #ee0d0d;
-  color: #fff;
+  color: #d41212;
+  transform: scale(1.5);
 }
 
 .header {
-  padding: 1.25rem 1rem 1rem 1rem;
+  padding: 0;
 }
 
-.image {
+.icon-wrapper {
+  position: relative;
+  margin: 0 auto 25px auto;
+  width: 80px;
+  height: 80px;
   display: flex;
-  margin-left: auto;
-  margin-right: auto;
-  background-color: #e2feee;
-  flex-shrink: 0;
   justify-content: center;
   align-items: center;
-  width: 3rem;
-  height: 3rem;
-  border-radius: 9999px;
-  animation: animate .6s linear alternate-reverse infinite;
-  transition: .6s ease;
 }
 
-.image svg {
-  color: #0afa2a;
-  width: 2rem;
-  height: 2rem;
+.glow {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  background-image: radial-gradient(circle, rgba(76, 175, 80, 0.5) 0%, rgba(76, 175, 80, 0) 70%);
+  animation: pulse 2s infinite ease-in-out;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(0.9);
+    opacity: 0.7;
+  }
+}
+
+.checkmark-path {
+  stroke-dasharray: 48;
+  stroke-dashoffset: 48;
+  animation: draw 0.5s 0.3s ease-out forwards;
 }
 
 .content {
-  margin-top: 0.75rem;
-  text-align: center;
+  margin-top: 0;
 }
 
 .title {
-  color: #066e29;
-  font-size: 1rem;
-  font-weight: 600;
-  line-height: 1.5rem;
+  font-size: 2rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+  background: linear-gradient(45deg, #219224, #33e769);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 .message {
-  margin-top: 0.5rem;
-  color: #595b5f;
-  font-size: 0.875rem;
-  line-height: 1.25rem;
+  color: #918e8e;
+  font-size: 1.1rem;
+  line-height: 1.6;
 }
 
-@keyframes animate {
-  from {
-    transform: scale(1);
-  }
-
+@keyframes draw {
   to {
-    transform: scale(1.09);
+    stroke-dashoffset: 0;
   }
 }
 </style>

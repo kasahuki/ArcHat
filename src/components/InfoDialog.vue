@@ -64,6 +64,7 @@ const close = () => {
 }
 
 .info-notification {
+  overflow: hidden;
   z-index: 10000000;
   position: fixed;
   top: 30px;

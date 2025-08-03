@@ -13,13 +13,14 @@
       <div class="drawing-board-apple" :class="{ fullscreen: isFullscreen }">
         <div class="drawing-board-header-apple" v-if="!isFullscreen">
           <h1><el-icon style="margin-right:8px;"><EditPen /></el-icon>Drawing Board</h1>
-          <div>
-            <DangerButton :type="showDrawingBoard ? 'danger' : 'success'" @click="showDrawingBoard = !showDrawingBoard">
-              {{ showDrawingBoard ? '隐藏画板' : '展开画板' }}
-            </DangerButton>
-            <DangerButton type="primary" @click="toggleFullscreen" style="margin-left: 12px;">
-              全屏
-            </DangerButton>
+                    <div class="header-actions">
+            <button class="toggle-icon-btn" @click="toggleFullscreen" title="全屏">
+              <span style="color:#5371f7"> <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg></span>
+             
+            </button>
+            <button class="toggle-icon-btn" @click="showDrawingBoard = !showDrawingBoard">
+              <svg class="toggle-icon" :class="{ 'is-open': showDrawingBoard }" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
           </div>
         </div>
         <button v-if="isFullscreen" class="fullscreen-exit-btn" @click="toggleFullscreen">
@@ -30,7 +31,7 @@
         </button>
         <transition name="fade">
           <iframe v-if="showDrawingBoard" ref="drawingIframe" src="https://excalidraw.com" :style="iframeStyle"
-            frameborder="0" class="drawing-iframe"></iframe>
+            frameborder="0" class="drawing-iframe" style="border-radius:0 0 12px 12px ;"></iframe>
         </transition>
       </div>
     </div>
@@ -43,9 +44,9 @@
         <div class="drawing-board-header-apple">
           <h1><el-icon style="margin-right:8px;"><Edit /></el-icon>Flash Editor</h1>
           <div>
-            <DangerButton :type="showEditor ? 'danger' : 'success'" @click="showEditor = !showEditor">
-              {{ showEditor ? '隐藏' : '展开' }}
-            </DangerButton>
+            <button class="toggle-icon-btn" @click="showEditor = !showEditor">
+              <svg class="toggle-icon" :class="{ 'is-open': showEditor }" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+            </button>
           </div>
         </div>
         <transition name="fade">
@@ -55,8 +56,15 @@
         </transition>
         <transition name="fade">
                             <div v-if="showEditor" ref="notesGridRef" class="notes-grid">
-
-                        <div v-for="note in notes" :key="note.id" class="note-card" :ref="el => setNoteCardRef(el, note.id)" @click.stop="editNote(note)" @contextmenu.prevent.stop="showContextMenu($event, note)">
+    <FloatingLove 
+      v-if="showLove"
+      :imageUrl="'/src/assets/image/emojiSets/贴吧表情/爱.png'"
+      :min-size="halfScreenWidth * 0.2"
+      :max-size="halfScreenWidth"
+      :duration="3"
+    />
+                        <div v-for="note in notes" :key="note.id" class="note-card" :class="{ 'is-pinned': note.isPinned }" :ref="el => setNoteCardRef(el, note.id)" @click.stop="editNote(note)" @contextmenu.prevent.stop="showContextMenu($event, note)">
+                          
               <div class="note-content" v-html="note.content"></div>
               <div class="note-actions">
                 <button @click.stop="editNote(note)" class="edit-note-btn" title="编辑">
@@ -108,8 +116,13 @@
 
     <!-- Fullscreen Editor Modal -->
     <transition name="fade">
-      <div v-if="showFullscreenEditor" class="fullscreen-editor-overlay" @click.self="closeFullscreenEditor">
-      <div class="fullscreen-editor-container">
+      <div 
+        v-if="showFullscreenEditor" 
+        class="fullscreen-editor-container"
+        :style="editorStyle"
+        @mousedown="startDrag"
+        ref="editorRef"
+      >
         <div class="fullscreen-editor-header">
           <div class="traffic-lights">
             <button class="traffic-light red" @click="closeFullscreenEditor"></button>
@@ -118,42 +131,42 @@
           </div>
           <div class="fullscreen-editor-title">Arc Editor</div>
         </div>
+        
         <FlashEditor ref="fullscreenEditorRef" @save-draft="handleFullscreenSave" />
       </div>
-    </div>
   </transition>
 
     <div class="elegant-divider"></div>
 
     <!-- Todo List 板块 -->
     <div class="drawing-board-outer">
-      <div class="drawing-board-apple" >
-      <div class="drawing-board-header-apple">
-        <h1><el-icon style="margin-right:8px;"><List /></el-icon>Todo List</h1>
-        <div>
-          <DangerButton type="primary" @click="showTodoList = !showTodoList" style="margin-left: 12px;">
-            {{ showTodoList ? '收起' : '展开' }}
-          </DangerButton>
+      <div class="drawing-board-apple">
+        <div class="todo-list-header">
+          <svg class="note-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 12h18M3 6h18M3 18h18"></path>
+          </svg>
+          <h1>To Do List</h1>
+          <button class="toggle-icon-btn" @click="showTodoList = !showTodoList">
+            <svg class="toggle-icon" :class="{ 'is-open': showTodoList }" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
         </div>
-      </div>
-      <transition name="fade">
-        <TodoList v-if="showTodoList" :todos="todoStore.todos" @add="handleAddTodo" @update="handleUpdateTodo" @delete="handleDeleteTodo" @reorder="handleReorderTodo" />
-      </transition>
+        <transition name="fade">
+          <TodoList v-if="showTodoList" :todos="todoStore.todos" @add="handleAddTodo" @update="handleUpdateTodo" @delete="handleDeleteTodo" @reorder="handleReorderTodo" />
+        </transition>
       </div>
     </div>
 
     <div class="drawing-board-outer" style="margin-bottom: 5rem;">
-      <div class="drawing-board-apple" >
-      <div class="drawing-board-header-apple">
-        <h1><el-icon style="margin-right:8px;"><Files /></el-icon>My Resources</h1>
-        <div>
-          <DangerButton type="primary" @click="showResourceDrawer = !showResourceDrawer" style="margin-left: 12px;">
-            {{ showResourceDrawer ? '收起' : '展开' }}
-          </DangerButton>
-        
+      <div class="drawing-board-apple">
+        <div class="todo-list-header">
+          <h1><el-icon style="margin-right:8px;"><Files /></el-icon>My Resources</h1>
+          <button class="toggle-icon-btn" @click="showResourceDrawer = !showResourceDrawer">
+            <svg class="toggle-icon" :class="{ 'is-open': showResourceDrawer }" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
+          </button>
         </div>
-      </div>
-      <ResourceDrawer :visible="showResourceDrawer" @close="showResourceDrawer = false" />
+        <transition name="fade">
+          <ResourceDrawer v-if="showResourceDrawer" :visible="showResourceDrawer" @close="showResourceDrawer = false" />
+        </transition>
       </div>
     </div>
 
@@ -197,8 +210,9 @@ import RightKeyPop from '@/components/RightKeyPop.vue';
 import TodoList from '@/components/TodoList.vue';
 import { useTodoStore } from '@/stores/todo.js';
 import { EditPen, Edit, List, Files, Search } from '@element-plus/icons-vue';
-import { Copy, Pencil, Trash2, MoreVertical, Share2, FileText, Send } from 'lucide-vue-next';
+import { Copy, Pencil, Trash2, MoreVertical, Share2, FileText, Send, Pin, PinOff } from 'lucide-vue-next';
 import FlashEditor from '@/components/FlashEditor.vue';
+import FloatingLove from '@/components/FloatingLove.vue';
 import NoteEditModal from '@/components/NoteEditModal.vue';
 import WorningTips from '@/components/WorningTips.vue';
 import MacWindowControls from '@/components/MacWindowControls.vue';
@@ -211,6 +225,20 @@ const showResourceDrawer = ref(false);
 const showTodoList = ref(true);
 const showEditor = ref(true);
 const notes = ref([]);
+
+// 手动排序函数，确保稳定性
+const sortNotes = () => {
+  // 使用原地排序来确保拖拽库的引用不变
+  notes.value.sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return 0; // 保持原始顺序
+  });
+};
+
+const editor = ref(null);
+const showLove = ref(false);
+const halfScreenWidth = ref(window.innerWidth / 2);
 const editingNote = ref(null);
 const showEditModal = ref(false);
 const showWarningTip = ref(false);
@@ -231,11 +259,29 @@ const contextMenu = ref({
   isCalculating: false
 });
 
+// 置顶功能切换
+const togglePin = (note) => {
+  note.isPinned = !note.isPinned;
+  sortNotes(); // 重新排序
+  // 保存到本地存储
+  localStorage.setItem('flash-notes', JSON.stringify(notes.value));
+  ArcMessage.success(note.isPinned ? '已置顶' : '已取消置顶');
+};
+
 const contextMenuItems = computed(() => {
   const note = contextMenu.value.note;
   if (!note) return [];
 
   return [
+    {
+      key: 'pin',
+      label: note.isPinned ? '取消置顶' : '置顶便签',
+      icon: note.isPinned ? PinOff : Pin,
+      onClick: () => {
+        togglePin(note);
+        hideContextMenu();
+      },
+    },
     {
       key: 'copy',
       label: '复制内容',
@@ -389,6 +435,7 @@ onMounted(() => {
       ...note,
       size: note.size || getNoteSizeFromContent(note.content)
     }));
+    sortNotes(); // 加载后立即排序
   }
 
   if (notesGridRef.value) {
@@ -478,8 +525,21 @@ const checkAllCardsOverflow = () => {
 // 新增：arcwater搜索框内容
 const arcwaterSearch = ref('');
 function handleArcwaterSearch() {
-  if (!arcwaterSearch.value.trim()) return;
-  const q = encodeURIComponent(arcwaterSearch.value.trim());
+  const searchText = arcwaterSearch.value.trim();
+  if (!searchText) return;
+
+  if (searchText.toLowerCase() === 'senjay') {
+    if (!showLove.value) {
+      showLove.value = true;
+      setTimeout(() => {
+        showLove.value = false;
+      }, 5000); // Disappears after 5 seconds
+    }
+    arcwaterSearch.value = ''; // Clear input after triggering
+    return; // Prevent the default search action
+  }
+
+  const q = encodeURIComponent(searchText);
   window.open(`https://www.baidu.com/s?wd=${q}`, '_blank');
 }
 
@@ -534,8 +594,11 @@ const handleSaveNote = (content) => {
   const newNote = { 
     id: Date.now(), 
     content,
+    isPinned: false,
+    createdAt: new Date().toISOString(),
   };
   notes.value.unshift(newNote);
+  sortNotes(); // 添加后重新排序
   localStorage.setItem('flash-notes', JSON.stringify(notes.value));
   ArcMessage.info("保存修改成功","请尽快提交结果")
   flashEditorRef.value.clearContent();
@@ -673,18 +736,23 @@ onUnmounted(() => {
   margin-bottom: 1rem;
 }
 .trace-post {
-  margin: 12rem;
-  background-color: #000511;
+  margin-top: 12rem;
+  background-color: #252424;
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 5rem;
+  padding:calc(5rem + 10px);
   border-radius: 12px;
   box-shadow: 0 1px 4px rgba(60,60,60,0.06);
   margin-bottom: 1rem;
   width: 100%;
+}
+.dark-mode .trace-post {
+  background-color: #171a20;
+ 
 
 }
+
 .arc-water-container {
   display: flex;
   flex-direction: column;
@@ -711,7 +779,12 @@ onUnmounted(() => {
   width: 100%;
   background: #ffffff ;
   border-radius: 12px;
-  box-shadow: 0 8px 32px 0 rgba(6, 607, 235, 0.1), 0 1.5px 4px 0 rgba(7, 43, 245, 0.04);
+  box-shadow: 0 1px 4px rgba(60,60,60,0.06);
+}
+
+.dark-mode .flash-footer {
+  background: #171b2b;
+
 }
 .elegant-divider {
   width: 80%;
@@ -786,20 +859,52 @@ onUnmounted(() => {
 }
 
 .drawing-board-header-apple {
+
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background-color: #ffffff;
+}
+
+.dark-mode .drawing-board-header-apple {
+  background-color: #171b2b;
+}
+.header-actions {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  margin-bottom: 18px;
-  padding: 0 8px;
-  padding: 12px 16px;
-  border-radius: 12px;
-  background: rgba(71, 204, 31, 0.95);
 }
 
 .drawing-board-header-apple h1 {
-  font-size: 1.7rem;
+  font-size: 1.2rem; /* Adjusted for a more modern feel */
   font-weight: 600;
-  color: #ffffff;
+  margin: 0;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+}
+
+
+
+.todo-list-header {
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--header-border-light);
+  background-color: #ffffff;
+}
+
+.dark-mode .todo-list-header {
+  background-color: #171b2b;
+  border-bottom-color: var(--header-border-dark);
+}
+
+.todo-list-header h1 {
+  font-size: 1.2rem;
+  font-weight: 600;
   margin: 0;
   letter-spacing: 0.5px;
   display: flex;
@@ -811,6 +916,42 @@ onUnmounted(() => {
   margin-right: 10px;
   display: flex;
   align-items: center;
+  color: #466df0;
+}
+
+.toggle-icon-btn {
+  background: none;
+  border: none;
+  padding: 4px;
+  margin-left: 12px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: background-color 0.2s ease;
+}
+
+.toggle-icon-btn:hover {
+  background-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark-mode .toggle-icon-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+.toggle-icon {
+  color: #8e8e93;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transform: rotate(0deg);
+}
+
+.dark-mode .toggle-icon {
+  color: #8d8d92;
+}
+
+.toggle-icon.is-open {
+  transform: rotate(180deg);
 }
 
 .drawing-iframe {
@@ -944,12 +1085,11 @@ onUnmounted(() => {
   align-items: start; /* Align items to the start of the grid area */
 }
 
-
-
 .note-card {
   margin-top: 2rem;
   background: rgba(251, 255, 250, 0.95); /* 高透明毛玻璃 */
     -webkit-backdrop-filter: blur(12px) saturate(180%);
+  backdrop-filter: blur(12px) saturate(180%);
   border-radius: 16px; /* More rounded corners */
   padding: 1.5rem; /* More padding */
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
@@ -969,12 +1109,28 @@ onUnmounted(() => {
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
 }
 
+/* 置顶便签样式 */
+.note-card.is-pinned {
+  position: relative; /* 增强布局稳定性 */
+  background: linear-gradient(135deg, rgba(10, 89, 216, 0.05) 0%, rgba(178, 197, 219, 0.05) 100%);
+  box-shadow: 0 8px 25px -5px rgba(59, 130, 246, 0.15), 0 4px 10px -2px rgba(59, 130, 246, 0.1);
+}
+
+.note-card.is-pinned:hover {
+  box-shadow: 0 20px 35px -5px rgba(59, 130, 246, 0.2), 0 10px 15px -5px rgba(59, 130, 246, 0.15);
+}
+
+
 .note-content {
   margin-bottom: 2rem;
   max-height: 450px; /* Directly apply max-height */
   overflow: hidden;   /* Hide the overflowing content */
   position: relative;
 }
+
+
+
+
 .note-content :deep(a) {
   color: #10b981 !important;
 }
@@ -994,7 +1150,20 @@ onUnmounted(() => {
     background: linear-gradient(to top, #1f2937, rgba(31, 41, 55, 0));
 }
 
-
+.note-card .note-content :deep(.inline-emoji) {
+  max-width: 30px;
+  max-height: 30px;
+  vertical-align: middle;
+  pointer-events: none; /* Prevent dragging and other pointer events */
+}
+.note-card .note-content :deep(img:not(.inline-emoji)) {
+  max-width: 80% !important;
+  object-fit: contain;
+  display: block;
+  margin: 10px auto;
+  user-select: none; /* Prevent text selection */
+  pointer-events: none; /* Prevent dragging and other pointer events */
+}
 
 
 
@@ -1024,24 +1193,33 @@ onUnmounted(() => {
   color: #f8f8f2; /* 柔和白色 */
   border-radius: 6px;
   padding: 12px;
-  margin: 12px 0;
-  overflow-x: auto;
+  margin: 15px 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+    line-clamp: 2;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  white-space: pre-wrap; 
+  word-break: break-all;
   font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
   font-size: 13px;
   line-height: 1.4;
+  position: relative;
+}
+.note-content :deep(pre)::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
+  background: linear-gradient(to top, #2d2d2d, rgba(45, 45, 45, 0));
+  pointer-events: none;
 }
 
 
 
-.note-content :deep(pre code) {
-  background: transparent;
-  color: inherit;
-  padding: 0;
-}
-.dark-mode .note-content :deep(pre code) {
-  background: transparent;
-
-}
 
 
 .note-actions {

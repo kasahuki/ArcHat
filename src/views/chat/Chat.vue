@@ -77,15 +77,12 @@
     <!-- #region 底部输入区 -->
     <!-- 底部输入区 -->
     <div class="message-input-container" ref="inputContainer">
-      <el-button class="input-icon-btn link-icon" circle>
-        <span>
-          <svg xmlns="http://www.w3.org/2000/svg" width="30"
-            viewBox="0 0 24 24"><!-- Icon from Google Material Icons by Material Design Authors - https://github.com/material-icons/material-icons/blob/master/LICENSE -->
-            <path fill="currentColor"
-              d="M19.05 4.91A9.82 9.82 0 0 0 12.04 2c-5.46 0-9.91 4.45-9.91 9.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38c1.45.79 3.08 1.21 4.74 1.21c5.46 0 9.91-4.45 9.91-9.91c0-2.65-1.03-5.14-2.9-7.01m-7.01 15.24c-1.48 0-2.93-.4-4.2-1.15l-.3-.18l-3.12.82l.83-3.04l-.2-.31a8.26 8.26 0 0 1-1.26-4.38c0-4.54 3.7-8.24 8.24-8.24c2.2 0 4.27.86 5.82 2.42a8.18 8.18 0 0 1 2.41 5.83c.02 4.54-3.68 8.23-8.22 8.23m4.52-6.16c-.25-.12-1.47-.72-1.69-.81c-.23-.08-.39-.12-.56.12c-.17.25-.64.81-.78.97c-.14.17-.29.19-.54.06c-.25-.12-1.05-.39-1.99-1.23c-.74-.66-1.23-1.47-1.38-1.72c-.14-.25-.02-.38.11-.51c.11-.11.25-.29.37-.43s.17-.25.25-.41c.08-.17.04-.31-.02-.43s-.56-1.34-.76-1.84c-.2-.48-.41-.42-.56-.43h-.48c-.17 0-.43.06-.66.31c-.22.25-.86.85-.86 2.07s.89 2.4 1.01 2.56c.12.17 1.75 2.67 4.23 3.74c.59.26 1.05.41 1.41.52c.59.19 1.13.16 1.56.1c.48-.07 1.47-.6 1.67-1.18c.21-.58.21-1.07.14-1.18s-.22-.16-.47-.28" />
-          </svg>
-        </span>
+      <!-- 通话按钮 -->
+      <el-button class="input-icon-btn call-icon" circle @click="showCallOptions = true">
+        <Icon icon="material-symbols:call" width="24" color="#008bd0" />
       </el-button>
+      
+
       <el-button ref="emojiButton" class="input-icon-btn" circle @click.stop="showEmojiPicker=!showEmojiPicker">
         <svg xmlns="http://www.w3.org/2000/svg" width="30"
           viewBox="0 0 24 24"><!-- Icon from Material Line Icons by Vjacheslav Trushkin - https://github.com/cyberalien/line-md/blob/master/license.txt -->
@@ -125,30 +122,25 @@
     <!-- #endregion -->
 
     <!-- #region Emoji 选择器 -->
-    <!-- Emoji 选择器抽屉 -->
-    <div
-      v-if="showEmojiPicker"
+    <!-- Emoji 选择器 -->
+    <EmojiPickerPopup
       ref="emojiPanel"
-      class="emoji-drawer-container"
-      direction="btt"
-      style="height: 400px !important;"
-    >
-      <emoji-picker
-     
-        @emoji-click="onEmojiSelect"
-        :native="true"
-        :show-preview="true"
-        :show-skin-tones="true"
-        :show-search="true"
-        :show-categories="true"
-        :show-recent="true"
-        :recent="recentEmojis"
-        :theme="isDarkMode ? 'dark' : 'light'"
-      />
-    </div>
+      :visible="showEmojiPicker"
+      @emoji-click="onEmojiSelect"
+    />
 
 
 
+    <!-- #endregion -->
+
+    <!-- #region 通话选项弹窗 -->
+    <!-- 通话选项弹窗 -->
+    <CallOptionsPopup 
+      :visible="showCallOptions" 
+      @close="showCallOptions = false"
+      @voice-call="startVoiceCall"
+      @video-call="startVideoCall"
+    />
     <!-- #endregion -->
 
     <!-- #region 用户详情弹窗 -->
@@ -161,12 +153,21 @@
     <div v-if="isReconnecting" class="ws-reconnect-mask">
       <WaitConnLoading />
     </div>
+
+    <!-- 摄像头设备选择器 -->
+    <CameraDeviceSelector
+      v-model="showCameraSelector"
+      :current-device-id="selectedCameraDeviceId"
+      @confirm="onCameraDeviceSelected"
+      @cancel="onCameraSelectionCanceled"
+    />
   </div>
 </template>
 
 <script setup>
 // #region 导入依赖
 import { ref, onMounted, watch, onUnmounted, computed, nextTick, h } from 'vue';
+import EmojiPickerPopup from '@/components/EmojiPickerPopup.vue';
 import {
   Microphone,
   ChatRound,
@@ -191,7 +192,13 @@ import Loading from '@/components/loading.vue';
 import clickSound from '@/assets/sounds/click.m4a'
 import dangerButton from '@/components/dangerButton.vue';
 import WaitConnLoading from '@/components/WaitConnLoading.vue';
+import CallOptionsPopup from '@/components/CallOptionsPopup.vue';
+import { Icon } from '@iconify/vue';
+import { useCallStore } from '@/stores/call.js';
+import { useVideoCallStore } from '@/stores/videoCall.js';
 import { onBeforeUnmount } from 'vue';
+import ArcMessage from '@/utils/ArcMessage'
+import CameraDeviceSelector from '@/components/CameraDeviceSelector.vue'
 // #endregion
 
 // #region 基础状态与引用
@@ -219,6 +226,16 @@ const isReconnecting = ref(false);
 const emojiPanel = ref(null);
 const emojiButton = ref(null);
 const inputContainer = ref(null);
+
+// 通话相关状态
+const showCallOptions = ref(false);
+const callStore = useCallStore();
+const videoCallStore = useVideoCallStore();
+
+// 摄像头设备选择相关状态
+const showCameraSelector = ref(false);
+const selectedCameraDeviceId = ref('');
+const pendingVideoCallTarget = ref(null);
 function onRecallMessage(msg) {
   // TODO: 撤回逻辑
   ElMessage.info('撤回功能开发中');
@@ -243,9 +260,9 @@ const handleClickOutside = (e) => {
   if (!showEmojiPicker.value) return;
   
   // 检查点击目标是否在 emoji 面板内
-  if (emojiPanel.value && emojiPanel.value.contains(e.target)) {
-    return;
-  }
+  if (emojiPanel.value && emojiPanel.value.$el && emojiPanel.value.$el.contains(event.target)) {
+      return;
+    }
   
   // 检查点击目标是否在底部输入控制栏内（包括所有按钮和输入框）
   if (inputContainer.value && inputContainer.value.contains(e.target)) {
@@ -508,6 +525,8 @@ onMounted(() => {
   };
   document.addEventListener('click', handleUserInteraction);
   document.addEventListener('touchstart', handleUserInteraction);
+  
+
 });
 
 onUnmounted(() => {
@@ -515,6 +534,7 @@ onUnmounted(() => {
   emitter.off('websocket-reconnect');
   emitter.off('websocket-connected');
   document.removeEventListener('click', handleClickOutside)
+  
 
 });
 // #endregion
@@ -626,20 +646,159 @@ const handleManualReconnect = async () => {
     }, 1500);
   } catch (error) {
     isReconnecting.value = false;
-    ElMessage.error('手动重连失败');
+    ArcMessage.error('手动重连失败');
   }
 };
 // #endregion
+
+// #region 通话功能
+/**
+ * 发起语音通话
+ */
+const startVoiceCall = async () => {
+  console.log('Chat.vue startVoiceCall 函数被调用');
+  try {
+    const targetUser = {
+      id: currentChat.value.id,
+      name: currentChat.value.name,
+      avatar: currentChat.value.avatar
+    };
+    if (!callStore || typeof callStore.startVoiceCall !== 'function') {
+      ArcMessage.error('callStore 初始化失败');
+      return;
+    }
+    
+    const success = await callStore.startVoiceCall(targetUser);
+    
+    if (success) {
+      ArcMessage.info('正在发起语音通话...');
+    } else {
+      ArcMessage.error('发起通话失败');
+    }
+  } catch (error) {
+    ArcMessage.error('发起通话失败: ' + error.message);
+  }
+};
+
+/**
+ * 发起视频通话
+ */
+const startVideoCall = async () => {
+  console.log('Chat.vue startVideoCall 函数被调用');
+  try {
+    // 构建目标用户信息
+    const targetUser = {
+      id: currentChat.value.id,
+      name: currentChat.value.name,
+      avatar: currentChat.value.avatar
+    };
+    
+    console.log('🎥 准备发起视频通话:', {
+      targetUser,
+      currentUserId: userStore.userInfo?.uid
+    });
+    
+    // 检查videoCallStore是否可用
+    if (!videoCallStore || typeof videoCallStore.startVideoCall !== 'function') {
+      console.error('❌ videoCallStore 初始化失败或方法不存在');
+      ArcMessage.error('视频通话模块初始化失败');
+      return;
+    }
+    
+    // 先显示摄像头设备选择器，让用户选择设备
+    console.log('📹 显示摄像头设备选择器');
+    pendingVideoCallTarget.value = targetUser;
+    showCallOptions.value = false; // 关闭通话选项弹窗
+    showCameraSelector.value = true; // 显示摄像头选择器
+    
+  } catch (error) {
+    console.error('❌ 视频通话函数执行异常:', error);
+    ArcMessage.error('视频通话发起异常: ' + error.message);
+  }
+};
+
+// 摄像头设备选择回调方法
+const onCameraDeviceSelected = async (deviceInfo) => {
+  console.log('📹 用户选择了摄像头设备:', deviceInfo);
+  
+  try {
+    selectedCameraDeviceId.value = deviceInfo.deviceId;
+    
+    if (!pendingVideoCallTarget.value) {
+      console.error('❌ 没有待发起的视频通话目标');
+      ArcMessage.error('视频通话目标丢失，请重试');
+      return;
+    }
+    
+    const targetUser = pendingVideoCallTarget.value;
+    console.log('🎥 使用选定设备发起视频通话:', {
+      device: deviceInfo.device?.label || '未知设备',
+      deviceId: deviceInfo.deviceId,
+      targetUser: targetUser.name
+    });
+    
+    // 发起视频通话，传入选定的设备ID
+    const result = await videoCallStore.startVideoCall(targetUser, {
+      cameraEnabled: true,
+      selectedDeviceId: deviceInfo.deviceId
+    });
+    
+    if (result.success) {
+      console.log('✅ 视频通话发起成功');
+      ArcMessage.success(`正在向 ${targetUser.name} 发起视频通话...`);
+    } else {
+      console.error('❌ 视频通话发起失败:', result.reason);
+      
+      // 根据失败原因显示不同的错误信息
+      switch (result.reason) {
+        case 'websocket_disconnected':
+          ArcMessage.error('网络连接已断开，请检查网络后重试');
+          break;
+        case 'call_in_progress':
+          ArcMessage.warning('当前有通话正在进行，请稍后再试');
+          break;
+        case 'start_call_failed':
+          ArcMessage.error('视频通话发起失败，请重试');
+          break;
+        case 'exception':
+          ArcMessage.error(`视频通话发起异常: ${result.error || '未知错误'}`);
+          break;
+        default:
+          ArcMessage.error('视频通话发起失败，请重试');
+      }
+    }
+  } catch (error) {
+    console.error('❌ 摄像头设备选择后发起通话异常:', error);
+    ArcMessage.error('视频通话发起异常: ' + error.message);
+  } finally {
+    // 清理状态
+    pendingVideoCallTarget.value = null;
+  }
+};
+
+const onCameraSelectionCanceled = () => {
+  console.log('❌ 用户取消了摄像头设备选择');
+  pendingVideoCallTarget.value = null;
+  ArcMessage.info('已取消视频通话');
+};
+// #endregion
+
 watch(connectionStatus, (val) => {
   console.log('Chat.vue 观察到 connectionStatus:', val);
   if (val === 'disconnected') {
-    ElMessage.warning('WebSocket 连接已断开，请刷新或者点击重连');
+    ArcMessage.error('WebSocket 连接已断开，请刷新或者点击重连');
   }
 });
 </script>
 
 <style scoped src="@/assets/styles/chat.css"></style>
 <style scoped>
+.emoji-fade-enter-active,
+.emoji-fade-leave-active {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.emoji-fade-enter-from,
 .status-dot {
   display: inline-block;
   width: 8px;
@@ -653,6 +812,17 @@ watch(connectionStatus, (val) => {
 
 .status-dot.offline {
   background: #f5222d;
+}
+
+/* 通话按钮样式 */
+.call-icon {
+  border: none !important;
+  transition: all 0.3s ease;
+}
+
+
+.call-icon:active {
+  transform: scale(0.95);
 }
 
 .user-status {

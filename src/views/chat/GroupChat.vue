@@ -85,15 +85,19 @@
         <Loading />
       </div>
       <!-- 群成员抽屉按钮 -->
-      <div class="member-drawer-btn-wrapper">
+      <div class="member-drawer-btn-wrapper" ref="memberDrawerBtnRef">
         <el-button type="primary" icon="UserFilled" @click="showMemberDrawer = true"
           class="member-btn-semicircle">群成员</el-button>
       </div>
       <!-- 群成员自定义抽屉，仅覆盖聊天区 -->
       <transition name="drawer-slide">
-        <div v-if="showMemberDrawer" class="custom-member-drawer">
+        <div v-if="showMemberDrawer" class="custom-member-drawer" ref="memberDrawerRef">
           <div class="drawer-header">
             <MacWindowControls @close="showMemberDrawer = false" style="margin-right: 8px; top: 2px" />
+          </div>
+          <div class="group-description-section" v-if="currentGroup.groupDesc">
+            <div class="group-description-title">群公告</div>
+            <div class="group-description-content">{{ currentGroup.groupDesc }}</div>
           </div>
           <div class="member-list">
             <div v-for="member in currentGroup.members.slice(0, 7)" :key="member.id" class="member-item">
@@ -179,26 +183,11 @@
       </el-button>
     </div>
     <!-- #region Emoji 选择器 -->
-    <!-- Emoji 选择器抽屉 -->
-    <div
-      v-if="showEmojiPicker"
+    <EmojiPickerPopup
       ref="emojiPanel"
-      class="emoji-drawer-container"
-      direction="btt"
-      style="height: 400px !important;"
-    >
-      <emoji-picker
-        @emoji-click="onEmojiSelect"
-        :native="true"
-        :show-preview="true"
-        :show-skin-tones="true"
-        :show-search="true"
-        :show-categories="true"
-        :show-recent="true"
-        :recent="recentEmojis"
-        :theme="isDarkMode ? 'dark' : 'light'"
-      />
-    </div>
+      :visible="showEmojiPicker"
+      @emoji-click="onEmojiSelect"
+    />
     <!-- #endregion -->
     <!-- 群聊专属功能区 -->
     <!-- WebSocket 连接状态提示（群聊） -->
@@ -235,6 +224,7 @@
 </template>
 <script setup>
 import { ref, onMounted, watch, nextTick, computed, onBeforeUnmount } from 'vue';
+import EmojiPickerPopup from '@/components/EmojiPickerPopup.vue';
 import { ChatRound, Link, Position, UserFilled, Close, Picture, UploadFilled } from '@element-plus/icons-vue';
 import 'emoji-picker-element';
 import { useDark } from '@vueuse/core';
@@ -391,6 +381,9 @@ function showGroupDetailPopupHandler(event) {
 
 
 const showGroupDrawer = ref(false);
+
+const memberDrawerRef = ref(null);
+const memberDrawerBtnRef = ref(null);
 const selectedGroupForDrawer = ref(null);
 // 处理群聊more按钮点击
 const handleGroupMoreClick = async (group, event) => {
@@ -812,7 +805,8 @@ const handleClickOutside = (e) => {
   if (!showEmojiPicker.value) return;
   
   // 检查点击目标是否在 emoji 面板内
-  if (emojiPanel.value && emojiPanel.value.contains(e.target)) {
+    // 检查点击目标是否在 emoji 面板内
+  if (emojiPanel.value && emojiPanel.value.$el && emojiPanel.value.$el.contains(e.target)) {
     return;
   }
   
@@ -935,6 +929,18 @@ function handleMemberClick(event, member) {
 }
 
 
+
+const handleClickOutsideMemberDrawer = (event) => {
+  if (
+    showMemberDrawer.value &&
+    memberDrawerRef.value &&
+    !memberDrawerRef.value.contains(event.target) &&
+    memberDrawerBtnRef.value &&
+    !memberDrawerBtnRef.value.contains(event.target)
+  ) {
+    showMemberDrawer.value = false;
+  }
+};
 
 function handleGroupMessage(data) {
   if (!data || !data.message) return;
@@ -1261,10 +1267,12 @@ function closeRightKeyPop(e) {
   showRightKeyPop.value = false
 }
 onMounted(() => {
-  document.addEventListener('mousedown', closeRightKeyPop)
+  document.addEventListener('mousedown', closeRightKeyPop);
+  document.addEventListener('mousedown', handleClickOutsideMemberDrawer);
 })
 onBeforeUnmount(() => {
-  document.removeEventListener('mousedown', closeRightKeyPop)
+  document.removeEventListener('mousedown', closeRightKeyPop);
+  document.removeEventListener('mousedown', handleClickOutsideMemberDrawer);
 })
 
 const showCopySuccess = ref(false)
@@ -1414,15 +1422,14 @@ function handleDropFile(e) {
   position: fixed;
   top: 0%;
   right: 0%;
-  width: 180px;
+  width: 250px;
   background: var(--drawer-bg, #90eb9f80);
   /* 半透明 */
   box-shadow: -2px 0 12px rgba(0, 0, 0, 0.12);
-  z-index: 10000;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
   color: var(--drawer-text, #222);
-  overflow-x: hidden;
   backdrop-filter: blur(16px) saturate(180%);
   -webkit-backdrop-filter: blur(16px) saturate(180%);
 }
@@ -1432,7 +1439,6 @@ function handleDropFile(e) {
   padding: 16px 20px 8px 20px;
   font-weight: bold;
   font-size: 16px;
-  border-bottom: 1px solid var(--drawer-border, #f0f0f0);
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -1446,17 +1452,63 @@ function handleDropFile(e) {
   background: transparent;
 }
 
+
+.group-description-section {
+  padding: 16px;
+  padding-bottom: 0;
+
+}
+
+.group-description-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+}
+
+.group-description-content {
+  font-size: 13px;
+  line-height: 1.5;
+  padding: 12px;
+  border-radius: 8px;
+  color: #3f4140;
+  border-left: 3px solid rgb(50, 49, 53);
+  border-right: 3px solid rgb(50, 49, 53);
+  word-wrap: break-word;
+  max-height: 120px;
+  overflow-y: auto;
+}
+
+.dark-mode .group-description-section {
+  border-bottom-color: var(--drawer-border, #404040);
+}
+
+.dark-mode .group-description-title {
+  color: var(--drawer-text, #e0e0e0);
+}
+
+
+
 .member-item {
   display: flex;
   align-items: center;
   gap: 13px;
   padding: 8px 16px;
-  border-bottom: 1px solid var(--drawer-border, #f0f0f0);
   color: var(--drawer-text, #222);
 }
-
+.member-item:hover {
+  background-color: rgb(155, 240, 129);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+.dark-mode .member-item:hover {
+  background-color: rgb(12, 41, 3);
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
 .member-item span {
-  font-size: 10px;
+  font-size: 14px;
   max-width: 70px;
   white-space: nowrap;
   overflow: hidden;
@@ -1588,6 +1640,15 @@ function handleDropFile(e) {
   align-items: flex-start;
   flex: 1 1 0%;
   min-width: 0;
+}
+
+.chat-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow: hidden;
+  background: var(--chat-bg-color);
+  position: relative;
 }
 
 .msg-username {
@@ -1739,6 +1800,8 @@ body.dark-theme .ws-reconnect-mask {
 .img-shadow:hover {
   box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.28), 0 2px 12px 0 rgba(0, 0, 0, 0.18);
 }
+
+
 
 /* 添加更宽的滚动条样式 */
 :deep(.chat-message-list::-webkit-scrollbar) {

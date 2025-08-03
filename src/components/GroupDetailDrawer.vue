@@ -1,8 +1,13 @@
 <template>
 
     <!-- 抽屉模式 -->
-    <div v-if="visible" class="group-detail-drawer-overlay">
-    <div :class="['group-detail-drawer', { 'iphone-card-preview': isIPhonePreview }]" @click.stop>
+    <div 
+      v-if="visible" 
+      :class="['group-detail-drawer', { 'iphone-card-preview': isIPhonePreview }]" 
+      :style="drawerStyle"
+      @mousedown="startDrag"
+      ref="drawerRef"
+    >
       <!-- 抽屉头部 -->
       <div class="drawer-header">
         <div class="drawer-handle"></div>
@@ -333,7 +338,6 @@
         </div>
       </div>
     </div>
-  </div>
 
   <!-- 用户详情弹窗 -->
   <UserDetailPopup v-model:visible="showUserDetail" :user="selectedUser" :position="userDetailPosition"
@@ -431,7 +435,7 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted } from 'vue'
+import { ref, computed, watch, onMounted, onUnmounted, nextTick } from 'vue'
 import MacWindowControls from './MacWindowControls.vue'
 import {
   UserFilled,
@@ -493,6 +497,97 @@ const activeTab = ref('manage')
 const fileSearchQuery = ref('')
 const activeFileFilter = ref('all')
 const showSuccessTips = ref(false)
+
+// 高性能拖拽功能
+const drawerRef = ref(null)
+const isDragging = ref(false)
+const dragOffset = ref({ x: 0, y: 0 })
+const position = ref({ x: window.innerWidth / 2 - 775, y: window.innerHeight / 2 - 400 }) // 居中显示
+
+// 计算样式 - 只用于初始定位，拖拽时直接操作DOM
+const drawerStyle = computed(() => ({
+  left: `${position.value.x}px`,
+  top: `${position.value.y}px`,
+  position: 'fixed',
+  zIndex: 20000
+}))
+
+// 高性能Windows风格拖拽 - 直接DOM操作
+const startDrag = (e) => {
+  // 更精确的拖拽区域检测 - 只允许在特定区域拖拽
+  const isInDragArea = e.target.closest('.drawer-header') || 
+                      (e.target.closest('.group-detail-drawer') && 
+                       !e.target.closest('.drawer-content'))
+  
+  if (!isInDragArea) return // 只在头部区域或边缘允许拖拽
+  
+  // 排除按钮和交互元素
+  if (e.target.closest('button, .el-button, .danger-button, .manage-option, .danger-item, .member-item, .el-input, .el-tabs, .clickable-avatar')) {
+    return
+  }
+  
+  isDragging.value = true
+  const rect = drawerRef.value.getBoundingClientRect()
+  dragOffset.value = {
+    x: e.clientX - rect.left,
+    y: e.clientY - rect.top
+  }
+  
+  // 设置拖拽样式和优化 - 移除 pointerEvents 设置
+  if (drawerRef.value) {
+    drawerRef.value.style.cursor = 'grabbing'
+    drawerRef.value.style.userSelect = 'none'
+    drawerRef.value.style.zIndex = '99999' // 确保在最顶层
+  }
+  
+  document.addEventListener('mousemove', onDrag, { passive: false })
+  document.addEventListener('mouseup', stopDrag, { passive: false })
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+const onDrag = (e) => {
+  if (!isDragging.value || !drawerRef.value) return
+  
+  const newX = e.clientX - dragOffset.value.x
+  const newY = e.clientY - dragOffset.value.y
+  
+  // 边界检查
+  const drawerWidth = isIPhonePreview.value ? 850 : 1550
+  const drawerHeight = 800
+  const maxX = window.innerWidth - drawerWidth
+  const maxY = window.innerHeight - drawerHeight
+  
+  const boundedX = Math.max(0, Math.min(newX, maxX))
+  const boundedY = Math.max(0, Math.min(newY, maxY))
+  
+  // 直接操作DOM，绕过Vue响应式系统
+  drawerRef.value.style.left = `${boundedX}px`
+  drawerRef.value.style.top = `${boundedY}px`
+  drawerRef.value.style.transform = 'translate3d(0, 0, 0)' // 启用硬件加速
+  
+  // 更新内部位置状态（但不触发重新渲染）
+  position.value.x = boundedX
+  position.value.y = boundedY
+  
+  e.preventDefault()
+  e.stopPropagation()
+}
+
+const stopDrag = () => {
+  isDragging.value = false
+  
+  // 恢复样式 - 移除 pointerEvents 恢复
+  if (drawerRef.value) {
+    drawerRef.value.style.cursor = 'default'
+    drawerRef.value.style.userSelect = 'auto'
+    drawerRef.value.style.zIndex = '20000'
+  }
+  
+  // 清理事件监听器
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+}
 // 群信息编辑相关
 const showEditDialog = ref(false)
 const editForm = ref({
@@ -944,6 +1039,17 @@ const handleFileDelete = (file) => {
 
 
 
+// 监听抽屉显示状态，处理拖拽初始化
+watch(() => props.visible, (newVal) => {
+  if (newVal) {
+    // 重置位置到居中
+    position.value = { 
+      x: window.innerWidth / 2 - (isIPhonePreview.value ? 425 : 775), 
+      y: window.innerHeight / 2 - 400 
+    }
+  }
+})
+
 // 监听props.group变化，重新初始化数据
 watch(() => props.group, (newGroup) => {
   if (newGroup && newGroup.id) {
@@ -1117,30 +1223,23 @@ const confirmDisbandGroup = async () => {
 const cancelDisbandGroup = () => {
   showDisbandWarning.value = false
 }
+
+// 生命周期钩子 - 清理拖拽事件
+onMounted(() => {
+  // 组件挂载时无需特殊处理
+})
+
+onUnmounted(() => {
+  // 组件卸载时清理可能残留的事件监听器
+  document.removeEventListener('mousemove', onDrag)
+  document.removeEventListener('mouseup', stopDrag)
+})
 </script>
 
 <style scoped>
 /* 抽屉样式 */
-.group-detail-drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  z-index: 500000; /* 提升层级，确保覆盖在管理页面之上 */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  animation: fadeIn 0.3s ease;
-  pointer-events: none;
-}
-
 .group-detail-drawer {
   position: fixed;
-
   width: 90%;
   max-width: 1550px;
   height: 100vh;
@@ -1150,7 +1249,7 @@ const cancelDisbandGroup = () => {
   -webkit-backdrop-filter: blur(40px) saturate(180%);
   border-radius: 28px;
   overflow: hidden;
-  z-index: 10000;
+  z-index: 20000;
   animation: slideDown 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   display: flex;
   flex-direction: column;
@@ -1161,8 +1260,21 @@ const cancelDisbandGroup = () => {
     inset 0 1px 0 rgba(255, 255, 255, 0.6),
     inset 0 -1px 0 rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.4);
-  position: relative;
-  pointer-events: auto;
+  cursor: grab;
+  user-select: none;
+  
+  /* 高性能拖拽优化 - 完全照拷通话气泡 */
+  will-change: transform, left, top;
+  transform: translate3d(0, 0, 0); /* 强制硬件加速 */
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  
+  /* 移除所有transition，确保拖拽时无延迟 */
+  transition: none !important;
+  
+  /* 优化渲染性能 */
+  contain: layout style paint;
+  isolation: isolate;
 }
 
 /* iPhone预览模式 - 缩小抽屉宽度，内容响应式布局 */
@@ -1292,15 +1404,24 @@ const cancelDisbandGroup = () => {
 }
 
 .drawer-header {
-  padding: 24px 32px 20px;
+  padding: 20px 30px 10px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
   background: linear-gradient(180deg,
       rgba(255, 255, 255, 0.9) 0%,
       rgba(255, 255, 255, 0.7) 100%);
   backdrop-filter: blur(20px) saturate(180%);
   -webkit-backdrop-filter: blur(20px) saturate(180%);
-  position: relative;
-  z-index: 2;
+  /* 拖拽相关样式 */
+  cursor: grab;
+  user-select: none;
+}
+
+.drawer-header:active {
+  cursor: grabbing;
 }
 
 .drawer-header::before {
@@ -2475,7 +2596,7 @@ const cancelDisbandGroup = () => {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 5000; /* 提升层级，确保覆盖在管理页面之上 */
+  z-index: 50000; /* 提升层级，确保覆盖在管理页面之上 */
   display: flex;
   justify-content: center;
   align-items: center;

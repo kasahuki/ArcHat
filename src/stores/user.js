@@ -7,16 +7,7 @@ export const useUserInfoStore = defineStore('userInfo', () => {
   const userInfo = ref('');
   const chatWS = ref(null);
 
-  // 计算属性：从 chatWS 实例获取连接状态
-  const connectionStatus = computed(() => {
-    const status = chatWS.value && typeof chatWS.value.getConnectionStatus === 'function' 
-      ? chatWS.value.getConnectionStatus() 
-      : 'disconnected';
-    console.log('userStore - connectionStatus:', status);
-    console.log('userStore - chatWS.value:', chatWS.value);
-    console.log('userStore - chatWS.value?.getConnectionStatus:', chatWS.value?.getConnectionStatus);
-    return status;
-  });
+
 
   const setUserInfo = (newUserInfo) => {
     userInfo.value = newUserInfo;
@@ -105,8 +96,35 @@ export const useUserInfoStore = defineStore('userInfo', () => {
                 emitter.emit('user-status', data.data);
                 console.log('收到用户上下线通知:', data.data);
                 break;
+              case 12: // WebRTC信令消息（语音和视频通话共用）
+                console.log('收到WebRTC信令消息:', data.data);
+                
+                // 根据信令类型和callId区分语音和视频通话
+                const signalType = data.data?.type;
+                const callId = data.data?.callId;
+                
+                // 视频通话信令判断逻辑（更完整）
+                const isVideoCallSignal = signalType && (
+                  // 明确的视频通话信令类型
+                  signalType.startsWith('video-') || 
+                  signalType === 'video-call-invite' ||
+                  signalType === 'video-call-accept' ||
+                  signalType === 'video-call-reject' ||
+                  signalType === 'video-call-hangup' ||
+                  // 通过callId判断：视频通话的callId包含'video_call'
+                  (callId && callId.includes('video_call'))
+                );
+                
+                if (isVideoCallSignal) {
+                  console.log('🎥 路由到视频通话信令处理:', signalType, '| callId:', callId);
+                  emitter.emit('video-webrtc-signal', data.data);
+                } else {
+                  console.log('📞 路由到语音通话信令处理:', signalType, '| callId:', callId);
+                  emitter.emit('webrtc-signal', data.data);
+                }
+                break;
               default:
-                console.log('未知消息类型:', data.data);
+                console.log('未知消息类型:', data.type, data.data);
             }
           } catch (error) {
             console.error('处理 WebSocket 消息失败:', error);
@@ -145,7 +163,7 @@ export const useUserInfoStore = defineStore('userInfo', () => {
     removeUserInfo, 
     chatWS, 
     connectWebSocket,
-    connectionStatus,
+
     // 直接暴露 chatWS 实例的方法，避免重复
     manualReconnect: () => {
       if (chatWS.value && typeof chatWS.value.manualReconnect === 'function') {
